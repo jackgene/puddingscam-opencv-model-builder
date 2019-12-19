@@ -1,0 +1,23 @@
+@import helper._
+
+@()(implicit request: RequestHeader)
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Puddings Cam</title>
+    <link rel="stylesheet" media="screen" href="@routes.Assets.versioned("stylesheets/main.css")">
+    <link rel="shortcut icon" type="image/vnd.microsoft.icon" href="@routes.Assets.versioned("images/favicon.png")">
+  </head>
+  <body>
+    <script type="text/javascript" src="@routes.Assets.versioned("javascripts/puddings-cam.elm.js")"></script>
+    <script type="text/javascript">
+      Elm.Main.fullscreen(
+        {
+          "tokenName": "@CSRF.getToken.name",
+          "tokenValue": "@CSRF.getToken.value"
+        }
+      );
+    </script>
+  </body>
+</html>

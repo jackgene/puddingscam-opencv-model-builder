@@ -1,0 +1,41 @@
+body {
+  font-family: sans-serif;
+  font-size: 0.9em;
+}
+
+/* Listing */
+.thumbnail {
+  float: left;
+  width: 330px;
+}
+
+/* Annotation */
+#annotation {
+}
+.shape {
+  position: absolute;
+  border: solid green 2px;
+}
+.move {
+  color: green;
+  cursor: grab;
+  padding-left: 0.3em;
+}
+.resize {
+  position: absolute;
+  right: -5px;
+  bottom: -5px;
+  width: 10px;
+  height: 10px;
+  cursor: nwse-resize;
+}
+
+/* Notifications */
+.info {
+  color: #007300;
+  background-color: #A0F5A0;
+}
+.error {
+  color: #730000;
+  background-color: #F5A0A0;
+}
