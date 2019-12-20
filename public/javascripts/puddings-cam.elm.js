@@ -13929,9 +13929,9 @@ var _user$project$Main$Resizing = F5(
 	function (a, b, c, d, e) {
 		return {ctor: 'Resizing', _0: a, _1: b, _2: c, _3: d, _4: e};
 	});
-var _user$project$Main$Moving = F3(
-	function (a, b, c) {
-		return {ctor: 'Moving', _0: a, _1: b, _2: c};
+var _user$project$Main$Moving = F4(
+	function (a, b, c, d) {
+		return {ctor: 'Moving', _0: a, _1: b, _2: c, _3: d};
 	});
 var _user$project$Main$SubmitAnnotationResponse = function (a) {
 	return {ctor: 'SubmitAnnotationResponse', _0: a};
@@ -15171,7 +15171,12 @@ var _user$project$Main$update = F2(
 															_2: _p50.size
 														};
 													default:
-														return {ctor: '_Tuple3', _0: _elm_lang$core$Maybe$Nothing, _1: _user$project$Main$Face, _2: annotation.imageSize};
+														return {
+															ctor: '_Tuple3',
+															_0: _elm_lang$core$Maybe$Nothing,
+															_1: _user$project$Main$Face,
+															_2: A2(_user$project$Main$Dimension, 0, 0)
+														};
 												}
 											}
 										}();
@@ -15200,7 +15205,7 @@ var _user$project$Main$update = F2(
 					};
 				}
 			case 'DragToResizeBoxStart':
-				var _p54 = _p30._0;
+				var _p59 = _p30._0;
 				return {
 					ctor: '_Tuple2',
 					_0: _elm_lang$core$Native_Utils.update(
@@ -15213,7 +15218,7 @@ var _user$project$Main$update = F2(
 										annotation,
 										{
 											mouseDragState: function () {
-												var _p51 = A2(
+												var shapesAndShape = A2(
 													_elm_lang$core$Maybe$andThen,
 													function (shapes) {
 														return A2(
@@ -15221,13 +15226,15 @@ var _user$project$Main$update = F2(
 															function (rect) {
 																return {ctor: '_Tuple2', _0: shapes, _1: rect};
 															},
-															A2(_user$project$Main$getShape, _p54, shapes));
+															A2(_user$project$Main$getShape, _p59, shapes));
 													},
 													annotation.shapes);
+												var _p51 = shapesAndShape;
 												if (_p51.ctor === 'Just') {
-													var _p53 = _p51._0._1;
+													var _p58 = _p51._0._0;
+													var _p57 = _p51._0._1;
 													var constrainTo = function () {
-														var _p52 = {ctor: '_Tuple2', _0: _p54, _1: _p51._0._0};
+														var _p52 = {ctor: '_Tuple2', _0: _p59, _1: _p58};
 														_v21_3:
 														do {
 															if (_p52.ctor === '_Tuple2') {
@@ -15256,14 +15263,38 @@ var _user$project$Main$update = F2(
 														} while(false);
 														return annotation.imageSize;
 													}();
-													var maxLen = A2(_elm_lang$core$Basics$min, constrainTo.widthPixel - _p53.location.xPixel, constrainTo.heightPixel - _p53.location.yPixel);
+													var maxLen = A2(_elm_lang$core$Basics$min, constrainTo.widthPixel - _p57.location.xPixel, constrainTo.heightPixel - _p57.location.yPixel);
 													var maxSize = A2(_user$project$Main$Dimension, maxLen, maxLen);
-													var minSize = A2(_user$project$Main$Dimension, 0, 0);
+													var minSize = function () {
+														var _p53 = {ctor: '_Tuple2', _0: _p59, _1: _p58};
+														_v22_2:
+														do {
+															if ((_p53.ctor === '_Tuple2') && (_p53._0.ctor === 'Face')) {
+																switch (_p53._1.ctor) {
+																	case 'FaceAndOneEye':
+																		var _p54 = _p53._1._1;
+																		return A2(_user$project$Main$Dimension, _p54.location.xPixel + _p54.size.widthPixel, _p54.location.yPixel + _p54.size.heightPixel);
+																	case 'FaceAndTwoEyes':
+																		var _p56 = _p53._1._2;
+																		var _p55 = _p53._1._1;
+																		return A2(
+																			_user$project$Main$Dimension,
+																			A2(_elm_lang$core$Basics$max, _p55.location.xPixel + _p55.size.widthPixel, _p56.location.xPixel + _p56.size.widthPixel),
+																			A2(_elm_lang$core$Basics$max, _p55.location.yPixel + _p55.size.heightPixel, _p56.location.yPixel + _p56.size.heightPixel));
+																	default:
+																		break _v22_2;
+																}
+															} else {
+																break _v22_2;
+															}
+														} while(false);
+														return A2(_user$project$Main$Dimension, 0, 0);
+													}();
 													return _elm_lang$core$Maybe$Just(
 														A5(
 															_user$project$Main$Resizing,
-															_user$project$Main$updateShapeInShapes(_p54),
-															_p53,
+															_user$project$Main$updateShapeInShapes(_p59),
+															_p57,
 															minSize,
 															maxSize,
 															_p30._1));
@@ -15286,18 +15317,18 @@ var _user$project$Main$update = F2(
 							workingAnnotation: A2(
 								_elm_lang$core$Maybe$map,
 								function (annotation) {
-									var _p55 = {ctor: '_Tuple2', _0: annotation.shapes, _1: annotation.mouseDragState};
-									if (((((_p55.ctor === '_Tuple2') && (_p55._0.ctor === 'Just')) && (_p55._1.ctor === 'Just')) && (_p55._1._0.ctor === 'Resizing')) && (_p55._1._0._4.ctor === '_Tuple2')) {
-										var _p58 = _p55._1._0._2;
-										var _p57 = _p55._1._0._3;
-										var _p56 = _p55._1._0._1;
-										var maxSizePx = A2(_elm_lang$core$Basics$min, _p57.widthPixel, _p57.heightPixel);
-										var minSizePx = A2(_elm_lang$core$Basics$max, _p58.widthPixel, _p58.heightPixel);
-										var baseSize = _p56.size;
+									var _p60 = {ctor: '_Tuple2', _0: annotation.shapes, _1: annotation.mouseDragState};
+									if (((((_p60.ctor === '_Tuple2') && (_p60._0.ctor === 'Just')) && (_p60._1.ctor === 'Just')) && (_p60._1._0.ctor === 'Resizing')) && (_p60._1._0._4.ctor === '_Tuple2')) {
+										var _p63 = _p60._1._0._2;
+										var _p62 = _p60._1._0._3;
+										var _p61 = _p60._1._0._1;
+										var maxSizePx = A2(_elm_lang$core$Basics$min, _p62.widthPixel, _p62.heightPixel);
+										var minSizePx = A2(_elm_lang$core$Basics$max, _p63.widthPixel, _p63.heightPixel);
+										var baseSize = _p61.size;
 										var candidateWidthPixel = annotation.scaleUp(
-											_elm_lang$core$Basics$round(_p30._0._0 - _p55._1._0._4._0)) + baseSize.widthPixel;
+											_elm_lang$core$Basics$round(_p30._0._0 - _p60._1._0._4._0)) + baseSize.widthPixel;
 										var candidateHeightPixel = annotation.scaleUp(
-											_elm_lang$core$Basics$round(_p30._0._1 - _p55._1._0._4._1)) + baseSize.heightPixel;
+											_elm_lang$core$Basics$round(_p30._0._1 - _p60._1._0._4._1)) + baseSize.heightPixel;
 										var preConstrainedSizePx = A2(_elm_lang$core$Basics$max, candidateWidthPixel, candidateHeightPixel);
 										var sizePx = A2(
 											_elm_lang$core$Basics$max,
@@ -15308,13 +15339,13 @@ var _user$project$Main$update = F2(
 											{
 												shapes: _elm_lang$core$Maybe$Just(
 													A2(
-														_p55._1._0._0,
+														_p60._1._0._0,
 														_elm_lang$core$Native_Utils.update(
-															_p56,
+															_p61,
 															{
 																size: A2(_user$project$Main$Dimension, sizePx, sizePx)
 															}),
-														_p55._0._0)),
+														_p60._0._0)),
 												modified: true
 											});
 									} else {
@@ -15326,7 +15357,7 @@ var _user$project$Main$update = F2(
 					_1: _elm_lang$core$Platform_Cmd$none
 				};
 			case 'DragToMoveBoxStart':
-				var _p60 = _p30._0;
+				var _p68 = _p30._0;
 				return {
 					ctor: '_Tuple2',
 					_0: _elm_lang$core$Native_Utils.update(
@@ -15339,16 +15370,39 @@ var _user$project$Main$update = F2(
 										annotation,
 										{
 											mouseDragState: function () {
-												var _p59 = A2(
+												var shapeAndBounds = A2(
 													_elm_lang$core$Maybe$andThen,
-													_user$project$Main$getShape(_p60),
+													function (shapes) {
+														return A2(
+															_elm_lang$core$Maybe$andThen,
+															function (rect) {
+																var _p64 = _p68;
+																if (_p64.ctor === 'Face') {
+																	return _elm_lang$core$Maybe$Just(
+																		{ctor: '_Tuple2', _0: rect, _1: annotation.imageSize});
+																} else {
+																	return A2(
+																		_elm_lang$core$Maybe$map,
+																		function (faceRect) {
+																			return {ctor: '_Tuple2', _0: rect, _1: faceRect.size};
+																		},
+																		A2(_user$project$Main$getShape, _user$project$Main$Face, shapes));
+																}
+															},
+															A2(_user$project$Main$getShape, _p68, shapes));
+													},
 													annotation.shapes);
-												if (_p59.ctor === 'Just') {
+												var _p65 = shapeAndBounds;
+												if (_p65.ctor === 'Just') {
+													var _p67 = _p65._0._0;
+													var _p66 = _p65._0._1;
+													var bottomRightBound = A2(_user$project$Main$Point, _p66.widthPixel - _p67.size.widthPixel, _p66.heightPixel - _p67.size.widthPixel);
 													return _elm_lang$core$Maybe$Just(
-														A3(
+														A4(
 															_user$project$Main$Moving,
-															_user$project$Main$updateShapeInShapes(_p60),
-															_p59._0,
+															_user$project$Main$updateShapeInShapes(_p68),
+															_p67,
+															bottomRightBound,
 															_p30._1));
 												} else {
 													return _elm_lang$core$Maybe$Nothing;
@@ -15369,26 +15423,37 @@ var _user$project$Main$update = F2(
 							workingAnnotation: A2(
 								_elm_lang$core$Maybe$map,
 								function (annotation) {
-									var _p61 = {ctor: '_Tuple2', _0: annotation.shapes, _1: annotation.mouseDragState};
-									if (((((_p61.ctor === '_Tuple2') && (_p61._0.ctor === 'Just')) && (_p61._1.ctor === 'Just')) && (_p61._1._0.ctor === 'Moving')) && (_p61._1._0._2.ctor === '_Tuple2')) {
-										var _p62 = _p61._1._0._1;
+									var _p69 = {ctor: '_Tuple2', _0: annotation.shapes, _1: annotation.mouseDragState};
+									if (((((_p69.ctor === '_Tuple2') && (_p69._0.ctor === 'Just')) && (_p69._1.ctor === 'Just')) && (_p69._1._0.ctor === 'Moving')) && (_p69._1._0._3.ctor === '_Tuple2')) {
+										var _p71 = _p69._1._0._2;
+										var _p70 = _p69._1._0._1;
 										var yPixelDelta = annotation.scaleUp(
-											_elm_lang$core$Basics$round(_p30._0._1 - _p61._1._0._2._1));
+											_elm_lang$core$Basics$round(_p30._0._1 - _p69._1._0._3._1));
 										var xPixelDelta = annotation.scaleUp(
-											_elm_lang$core$Basics$round(_p30._0._0 - _p61._1._0._2._0));
-										var baseLocation = _p62.location;
+											_elm_lang$core$Basics$round(_p30._0._0 - _p69._1._0._3._0));
+										var baseLocation = _p70.location;
+										var preConstrainedXPixel = baseLocation.xPixel + xPixelDelta;
+										var xPixel = A2(
+											_elm_lang$core$Basics$max,
+											0,
+											A2(_elm_lang$core$Basics$min, _p71.xPixel, preConstrainedXPixel));
+										var preConstrainedYPixel = baseLocation.yPixel + yPixelDelta;
+										var yPixel = A2(
+											_elm_lang$core$Basics$max,
+											0,
+											A2(_elm_lang$core$Basics$min, _p71.yPixel, preConstrainedYPixel));
 										return _elm_lang$core$Native_Utils.update(
 											annotation,
 											{
 												shapes: _elm_lang$core$Maybe$Just(
 													A2(
-														_p61._1._0._0,
+														_p69._1._0._0,
 														_elm_lang$core$Native_Utils.update(
-															_p62,
+															_p70,
 															{
-																location: A2(_user$project$Main$Point, baseLocation.xPixel + xPixelDelta, baseLocation.yPixel + yPixelDelta)
+																location: A2(_user$project$Main$Point, xPixel, yPixel)
 															}),
-														_p61._0._0)),
+														_p69._0._0)),
 												modified: true
 											});
 									} else {
@@ -15423,55 +15488,55 @@ var _user$project$Main$update = F2(
 						model,
 						{message: _elm_lang$core$Maybe$Nothing}),
 					_1: function () {
-						var _p63 = A2(
+						var _p72 = A2(
 							_elm_lang$core$Maybe$andThen,
 							function (_) {
 								return _.shapes;
 							},
 							model.workingAnnotation);
-						if (_p63.ctor === 'Just') {
+						if (_p72.ctor === 'Just') {
 							var labeledShapes = function () {
-								var _p64 = _p63._0;
-								switch (_p64.ctor) {
+								var _p73 = _p72._0;
+								switch (_p73.ctor) {
 									case 'FaceOnly':
 										return {
 											ctor: '::',
-											_0: {ctor: '_Tuple2', _0: 'face', _1: _p64._0},
+											_0: {ctor: '_Tuple2', _0: 'face', _1: _p73._0},
 											_1: {ctor: '[]'}
 										};
 									case 'FaceAndOneEye':
-										var _p65 = _p64._0;
+										var _p74 = _p73._0;
 										return {
 											ctor: '::',
-											_0: {ctor: '_Tuple2', _0: 'face', _1: _p65},
+											_0: {ctor: '_Tuple2', _0: 'face', _1: _p74},
 											_1: {
 												ctor: '::',
 												_0: {
 													ctor: '_Tuple2',
 													_0: 'eye',
-													_1: A2(_user$project$Main$absolutize, _p65, _p64._1)
+													_1: A2(_user$project$Main$absolutize, _p74, _p73._1)
 												},
 												_1: {ctor: '[]'}
 											}
 										};
 									default:
-										var _p66 = _p64._0;
+										var _p75 = _p73._0;
 										return {
 											ctor: '::',
-											_0: {ctor: '_Tuple2', _0: 'face', _1: _p66},
+											_0: {ctor: '_Tuple2', _0: 'face', _1: _p75},
 											_1: {
 												ctor: '::',
 												_0: {
 													ctor: '_Tuple2',
 													_0: 'eye',
-													_1: A2(_user$project$Main$absolutize, _p66, _p64._1)
+													_1: A2(_user$project$Main$absolutize, _p75, _p73._1)
 												},
 												_1: {
 													ctor: '::',
 													_0: {
 														ctor: '_Tuple2',
 														_0: 'eye',
-														_1: A2(_user$project$Main$absolutize, _p66, _p64._2)
+														_1: A2(_user$project$Main$absolutize, _p75, _p73._2)
 													},
 													_1: {ctor: '[]'}
 												}
@@ -15507,16 +15572,16 @@ var _user$project$Main$update = F2(
 													_1: _elm_lang$core$Json_Encode$list(
 														A2(
 															_elm_lang$core$List$map,
-															function (_p67) {
-																var _p68 = _p67;
-																var _p69 = _p68._1;
+															function (_p76) {
+																var _p77 = _p76;
+																var _p78 = _p77._1;
 																return _elm_lang$core$Json_Encode$object(
 																	{
 																		ctor: '::',
 																		_0: {
 																			ctor: '_Tuple2',
 																			_0: 'label',
-																			_1: _elm_lang$core$Json_Encode$string(_p68._0)
+																			_1: _elm_lang$core$Json_Encode$string(_p77._0)
 																		},
 																		_1: {
 																			ctor: '::',
@@ -15529,28 +15594,28 @@ var _user$project$Main$update = F2(
 																						_0: {
 																							ctor: '_Tuple2',
 																							_0: 'leftPixel',
-																							_1: _elm_lang$core$Json_Encode$int(_p69.location.xPixel)
+																							_1: _elm_lang$core$Json_Encode$int(_p78.location.xPixel)
 																						},
 																						_1: {
 																							ctor: '::',
 																							_0: {
 																								ctor: '_Tuple2',
 																								_0: 'topPixel',
-																								_1: _elm_lang$core$Json_Encode$int(_p69.location.yPixel)
+																								_1: _elm_lang$core$Json_Encode$int(_p78.location.yPixel)
 																							},
 																							_1: {
 																								ctor: '::',
 																								_0: {
 																									ctor: '_Tuple2',
 																									_0: 'widthPixel',
-																									_1: _elm_lang$core$Json_Encode$int(_p69.size.widthPixel)
+																									_1: _elm_lang$core$Json_Encode$int(_p78.size.widthPixel)
 																								},
 																								_1: {
 																									ctor: '::',
 																									_0: {
 																										ctor: '_Tuple2',
 																										_0: 'heightPixel',
-																										_1: _elm_lang$core$Json_Encode$int(_p69.size.heightPixel)
+																										_1: _elm_lang$core$Json_Encode$int(_p78.size.heightPixel)
 																									},
 																									_1: {ctor: '[]'}
 																								}

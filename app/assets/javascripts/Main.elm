@@ -47,7 +47,7 @@ type Shapes
   | FaceAndTwoEyes Rectangle Rectangle Rectangle
 type alias MousePos = (Float, Float)
 type MouseDragState
-  = Moving (Rectangle -> Shapes -> Shapes) Rectangle MousePos
+  = Moving (Rectangle -> Shapes -> Shapes) Rectangle Point MousePos
   | Resizing (Rectangle -> Shapes -> Shapes) Rectangle Dimension Dimension MousePos
 type alias WorkingAnnotation =
   { imageSize : Dimension
@@ -374,7 +374,7 @@ update msg model =
                         (Just (FaceAndTwoEyes faceRect eye1Rect rect), Eye2, faceRect.size)
                       Just (FaceAndTwoEyes _ _ _) ->
                         -- The Elm compiler does not do this, but this cannot happen
-                        (Nothing, Face, annotation.imageSize)
+                        (Nothing, Face, Dimension 0 0)
 
                   minSize : Dimension
                   minSize = Dimension 0 0
@@ -402,11 +402,37 @@ update msg model =
           ( \annotation ->
             { annotation
             | mouseDragState =
-              case Maybe.andThen (\shapes -> Maybe.map (\rect -> (shapes, rect)) (getShape shapeId shapes)) annotation.shapes of
+              let
+                shapesAndShape : Maybe (Shapes, Rectangle)
+                shapesAndShape =
+                  Maybe.andThen
+                  ( \shapes ->
+                    Maybe.map (\rect -> (shapes, rect)) (getShape shapeId shapes)
+                  )
+                  annotation.shapes
+              in case shapesAndShape of
                 Just (shapes, rect) ->
                   let
                     minSize : Dimension
-                    minSize = Dimension 0 0 -- TODO face needs to contain eyes
+                    minSize =
+                      case (shapeId, shapes) of
+                        (Face, FaceAndOneEye _ eye1Rect) ->
+                          Dimension
+                          (eye1Rect.location.xPixel + eye1Rect.size.widthPixel)
+                          (eye1Rect.location.yPixel + eye1Rect.size.heightPixel)
+
+                        (Face, FaceAndTwoEyes _ eye1Rect eye2Rect) ->
+                          Dimension
+                          ( max
+                            (eye1Rect.location.xPixel + eye1Rect.size.widthPixel)
+                            (eye2Rect.location.xPixel + eye2Rect.size.widthPixel)
+                          )
+                          ( max
+                            (eye1Rect.location.yPixel + eye1Rect.size.heightPixel)
+                            (eye2Rect.location.yPixel + eye2Rect.size.heightPixel)
+                          )
+
+                        _ ->  Dimension 0 0
 
                     constrainTo : Dimension
                     constrainTo =
@@ -435,7 +461,7 @@ update msg model =
       , Cmd.none
       )
 
-    DragToResizeBoxMove (xPixel, yPixel) ->
+    DragToResizeBoxMove (curXPixel, curYPixel) ->
       ( { model
         | workingAnnotation =
           Maybe.map
@@ -447,10 +473,10 @@ update msg model =
                   baseSize = baseRect.size
 
                   candidateWidthPixel : Int
-                  candidateWidthPixel = annotation.scaleUp (round (xPixel - baseXPixel)) + baseSize.widthPixel
+                  candidateWidthPixel = annotation.scaleUp (round (curXPixel - baseXPixel)) + baseSize.widthPixel
 
                   candidateHeightPixel : Int
-                  candidateHeightPixel = annotation.scaleUp (round (yPixel - baseYPixel)) + baseSize.heightPixel
+                  candidateHeightPixel = annotation.scaleUp (round (curYPixel - baseYPixel)) + baseSize.heightPixel
 
                   preConstrainedSizePx : Int
                   preConstrainedSizePx = max candidateWidthPixel candidateHeightPixel
@@ -483,8 +509,32 @@ update msg model =
           ( \annotation ->
             { annotation
             | mouseDragState =
-              case Maybe.andThen (getShape shapeId) annotation.shapes of
-                Just rect -> Just (Moving (updateShapeInShapes shapeId) rect mousePos)
+              let
+                shapeAndBounds : Maybe (Rectangle, Dimension)
+                shapeAndBounds =
+                  Maybe.andThen
+                  ( \shapes ->
+                    Maybe.andThen
+                    ( \rect ->
+                      case shapeId of
+                        Face -> Just (rect, annotation.imageSize)
+                        _ ->
+                          Maybe.map
+                          (\faceRect -> (rect, faceRect.size))
+                          (getShape Face shapes)
+                    )
+                    (getShape shapeId shapes)
+                  )
+                  annotation.shapes
+              in case shapeAndBounds of
+                Just (rect, bounds) ->
+                  let
+                    bottomRightBound : Point
+                    bottomRightBound =
+                      Point (bounds.widthPixel - rect.size.widthPixel) (bounds.heightPixel - rect.size.widthPixel)
+                  in
+                    Just (Moving (updateShapeInShapes shapeId) rect bottomRightBound mousePos)
+
                 Nothing -> Nothing
             }
           )
@@ -493,30 +543,40 @@ update msg model =
       , Cmd.none
       )
 
-    DragToMoveBoxMove (xPixel, yPixel) ->
+    DragToMoveBoxMove (curXPixel, curYPixel) ->
       ( { model
         | workingAnnotation =
           Maybe.map
           ( \annotation ->
             case (annotation.shapes, annotation.mouseDragState) of
-              (Just shapes, Just (Moving updateShapes baseRect (baseXPixel, baseYPixel))) ->
+              (Just shapes, Just (Moving updateShapes baseRect bottomRightBound (baseXPixel, baseYPixel))) ->
                 let
                   baseLocation : Point
                   baseLocation = baseRect.location
 
                   xPixelDelta : Int
-                  xPixelDelta = annotation.scaleUp (round (xPixel - baseXPixel))
+                  xPixelDelta = annotation.scaleUp (round (curXPixel - baseXPixel))
 
                   yPixelDelta : Int
-                  yPixelDelta = annotation.scaleUp (round (yPixel - baseYPixel))
+                  yPixelDelta = annotation.scaleUp (round (curYPixel - baseYPixel))
+
+                  preConstrainedXPixel : Int
+                  preConstrainedXPixel = baseLocation.xPixel + xPixelDelta
+
+                  preConstrainedYPixel : Int
+                  preConstrainedYPixel = baseLocation.yPixel + yPixelDelta
+
+                  xPixel : Int
+                  xPixel = max 0 (min bottomRightBound.xPixel preConstrainedXPixel)
+
+                  yPixel : Int
+                  yPixel = max 0 (min bottomRightBound.yPixel preConstrainedYPixel)
                 in
                   { annotation
                   | shapes =
                     Just
                     ( updateShapes
-                      { baseRect
-                      | location = Point (baseLocation.xPixel + xPixelDelta) (baseLocation.yPixel + yPixelDelta)
-                      }
+                      { baseRect | location = Point xPixel yPixel }
                       shapes
                     )
                   , modified = True
@@ -647,7 +707,7 @@ shapesView scaleDown mouseDragState shapes =
                   (Nothing, FaceAndTwoEyes _ _ _) -> "default"
                   (Nothing, _) -> "crosshair"
                   (Just (Resizing _ _ _ _ _), _) -> "nwse-resize"
-                  (Just (Moving _ _ _ ), _) -> "grabbing"
+                  (Just (Moving _ _ _ _), _) -> "grabbing"
             in ( "cursor", cursor )
           ]
         ]
@@ -660,7 +720,7 @@ shapesView scaleDown mouseDragState shapes =
             [ onMove ( .clientPos >> DragToResizeBoxMove )
             , onUp ( always DragStop )
             ]
-          (Just (Moving _ _ _), _) ->
+          (Just (Moving _ _ _ _), _) ->
             [ onMove ( .clientPos >> DragToMoveBoxMove )
             , onUp ( always DragStop )
             ]
@@ -698,7 +758,7 @@ shapesView scaleDown mouseDragState shapes =
                       case mouseDragState of
                         Nothing -> "default"
                         Just (Resizing _ _ _ _ _) -> "nwse-resize"
-                        Just (Moving _ _ _) -> "grabbing"
+                        Just (Moving _ _ _ _) -> "grabbing"
                   in ( "cursor", cursor )
                 ]
               ]
@@ -783,7 +843,7 @@ view model =
                 [ onMove ( .clientPos >> DragToResizeBoxMove )
                 , onUp ( always DragStop )
                 ]
-              Just (Moving _ _ _) ->
+              Just (Moving _ _ _ _) ->
                 [ onMove ( .clientPos >> DragToMoveBoxMove )
                 , onUp ( always DragStop )
                 ]
