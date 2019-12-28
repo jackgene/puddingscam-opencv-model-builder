@@ -727,6 +727,15 @@ shapesView scaleDown mouseDragState shapes =
       )
       ( [ div
           [ class "move"
+          , style
+            [ let
+                cursor : String
+                cursor =
+                  case mouseDragState of
+                    Just (Moving _ _ _ _) -> "grabbing"
+                    _ -> "grab"
+              in ( "cursor", cursor )
+            ]
           , onDown ( .clientPos >> (DragToMoveBoxStart Face) )
           ]
           [ text "🐶" ]
@@ -764,6 +773,15 @@ shapesView scaleDown mouseDragState shapes =
               ]
               [ div
                 [ class "move"
+                , style
+                  [ let
+                      cursor : String
+                      cursor =
+                        case mouseDragState of
+                          Just (Moving _ _ _ _) -> "grabbing"
+                          _ -> "grab"
+                    in ( "cursor", cursor )
+                  ]
                 , onDown ( .clientPos >> (DragToMoveBoxStart shapeId) )
                 ]
                 [ text "👁" ]
