@@ -100,7 +100,10 @@ class ImageService @Inject()(cfg: Configuration) {
   def getAnnotations(path: String): Option[Annotations] = {
     new File(annotationsDir, s"${path}.json") match {
       case annotationFile: File if annotationFile.exists =>
-        Option(Json.parse(Source.fromFile(annotationFile).mkString).as[Annotations])
+        Option(
+          Json.parse(Source.fromFile(annotationFile).mkString).as[Annotations].
+            copy(lastSaved = annotationFile.lastModified)
+        )
 
       case _ => None
     }

@@ -117,8 +117,8 @@ class Application @Inject()(
     )
   }
 
-  def trainModel(objectSizePx: Int): Action[AnyContent] = Action {
-    detectionService.trainModel(objectSizePx)
+  def trainModel(label: String, objectSizePx: Int): Action[AnyContent] = Action {
+    detectionService.trainModel(label, objectSizePx)
     NoContent
   }
 }

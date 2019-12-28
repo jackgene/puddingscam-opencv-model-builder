@@ -3,12 +3,13 @@ package services
 import java.awt.Rectangle
 import java.awt.image.BufferedImage
 import java.io.{File, FileWriter, PrintWriter}
+import java.nio.file.Files
+import java.util.Comparator
 
 import javax.imageio.ImageIO
 import javax.inject.{Inject, Singleton}
 import model.{Annotation, Annotations}
 import play.api.Configuration
-import play.api.libs.json.Json
 
 import scala.collection.immutable.ArraySeq
 import scala.io.Source
@@ -52,28 +53,32 @@ class DetectionService @Inject()(cfg: Configuration, imageService: ImageService)
           fileOrDir: File <- ArraySeq.unsafeWrapArray(nonEmpty)
           annotations: (String,Annotations) <-
             if (fileOrDir.isDirectory) getAllAnnotations(fileOrDir)
-            else Seq(
-              fileOrDir.getAbsolutePath.drop(AnnotationsDirPathChars + 1).dropRight(5) -> Json.parse(Source.fromFile(fileOrDir).mkString).as[Annotations]
-            )
+            else {
+              val path: String = fileOrDir.getAbsolutePath.drop(AnnotationsDirPathChars + 1).dropRight(5)
+
+              imageService.getAnnotations(path).map { annotations: Annotations => (path, annotations) }
+            }
         } yield annotations
     }
   }
 
-  def trainModel(objectSizePx: Int): Unit = {
+  def trainModel(label: String, objectSizePx: Int): Unit = {
     val allAnnotations: Seq[(String, Annotations)] = getAllAnnotations(annotationsDir)
 
-    val infoFile = new File(trainingDir, "info.dat")
+    val labelTrainingDir = new File(trainingDir, label)
+    if (!labelTrainingDir.exists) labelTrainingDir.mkdirs()
+    val infoFile = new File(labelTrainingDir, "info.dat")
     val infoFileWriter = new PrintWriter(new FileWriter(infoFile, /*append=*/true))
     try {
-      val fgDir = new File(trainingDir, "fg")
+      val fgDir = new File(labelTrainingDir, "fg")
 
       for {
         (path: String, annotations: Annotations) <- allAnnotations
-        outFile = new File(fgDir, path.replace(" ", "%20") + ".jpg") // OpenCV CLI tools can't handle spaces
-        if !outFile.exists()
+        (annotation: Annotation, idx: Int) <- annotations.annotations.filter(_.label == label).zipWithIndex
+        outFile = new File(fgDir, s"${path.replace(" ", "%20")}.${idx}.jpg") // OpenCV CLI tools can't handle spaces
+        if !outFile.exists() || outFile.lastModified < annotations.lastSaved
         _ = outFile.getParentFile.mkdirs()
         img: BufferedImage <- imageService.getImage(path)
-        annotation: Annotation <- annotations.annotations
       } {
         val rect: Rectangle = annotation.shape
         ImageIO.write(img.getSubimage(rect.x, rect.y, rect.width, rect.height), "jpeg", outFile)
@@ -86,27 +91,39 @@ class DetectionService @Inject()(cfg: Configuration, imageService: ImageService)
     }
     val numPos: Int = Source.fromFile(infoFile).getLines().length
 
-    val bgFile = new File(trainingDir, "bg.txt")
+    val bgFile = new File(labelTrainingDir, "bg.txt")
     val bgFileWriter = new PrintWriter(new FileWriter(bgFile, /*append=*/true))
     try {
-      val bgDir = new File(trainingDir, "bg")
+      val bgDir = new File(labelTrainingDir, "bg")
 
       for {
         (path: String, annotations: Annotations) <- allAnnotations
+        img: BufferedImage <- imageService.getImage(path)
+        rects: Set[Rectangle] = annotations.annotations.filter(_.label == label).map(_.shape).toSet
+        if rects.nonEmpty
         outDir = new File(bgDir, path.replace(" ", "%20")) // OpenCV CLI tools can't handle spaces
+        _ = if (outDir.exists && outDir.lastModified < annotations.lastSaved)
+          Files.walk(outDir.toPath).
+          sorted(Comparator.reverseOrder()).
+          forEach(Files.delete _)
         if !outDir.exists()
         _ = outDir.mkdirs()
-        img: BufferedImage <- imageService.getImage(path)
-        annotation: Annotation <- annotations.annotations
-        rect: Rectangle = annotation.shape
-        step: Int = rect.width / 2
-        margin: Int = rect.width * 3 / 4
-        x: Int <- 0 to (img.getWidth - rect.width) by step
-        y: Int <- 0 to (img.getHeight - rect.height) by step
-        if x < rect.x - margin || x >= rect.x + margin || y < rect.y - margin || y >= rect.y + margin
+        size: Int = rects.map(_.width).max
+        step: Int = size / 2
+        margin: Int = size * 3 / 4
+        bounds: Rectangle <-
+          if (label == "eye") annotations.annotations.find(_.label == "face").map(_.shape)
+          else Option(img.getRaster.getBounds)
+        relX: Int <- 0 to (bounds.width - size) by step
+        x = relX + bounds.x
+        relY: Int <- 0 to (bounds.height - size) by step
+        y = relY + bounds.y
+        if rects.forall { rect: Rectangle =>
+          x < rect.x - margin || x >= rect.x + margin || y < rect.y - margin || y >= rect.y + margin
+        }
       } {
-        val imgOutFile = new File(outDir, s"left${x}_top${y}.jpg")
-        ImageIO.write(img.getSubimage(x, y, rect.width, rect.height), "jpeg", imgOutFile)
+        val imgOutFile = new File(outDir, f"y${y}%04d_x${x}%04d.jpg")
+        ImageIO.write(img.getSubimage(x, y, size, size), "jpeg", imgOutFile)
         bgFileWriter.println(imgOutFile.getAbsolutePath)
       }
     } finally {
@@ -115,7 +132,7 @@ class DetectionService @Inject()(cfg: Configuration, imageService: ImageService)
     val numNeg: Int = Source.fromFile(bgFile).getLines().length
 
     val modelName = s"model_${objectSizePx}x${objectSizePx}_run${System.currentTimeMillis}"
-    val modelDir = new File(trainingDir, modelName)
+    val modelDir = new File(labelTrainingDir, modelName)
     new File(modelDir, "data").mkdirs()
 
     val vecCmd =
@@ -127,7 +144,7 @@ class DetectionService @Inject()(cfg: Configuration, imageService: ImageService)
     (s"echo Command: ${vecCmd}" #>> vecLogFile).!
     val vecLog = new PrintWriter(new FileWriter(vecLogFile, /*append=*/true))
     try {
-      Process(vecCmd, trainingDir).!(ProcessLogger { line: String => vecLog.println(line) })
+      Process(vecCmd, labelTrainingDir).!(ProcessLogger { line: String => vecLog.println(line) })
     } finally {
       vecLog.close()
     }
@@ -143,7 +160,7 @@ class DetectionService @Inject()(cfg: Configuration, imageService: ImageService)
     (s"echo Command: ${trainCmd}" #>> trainLogFile).!
     val trainLog = new PrintWriter(new FileWriter(trainLogFile, /*append=*/true))
     try {
-      Process(trainCmd, trainingDir).!(ProcessLogger { line: String => trainLog.println(line) })
+      Process(trainCmd, labelTrainingDir).!(ProcessLogger { line: String => trainLog.println(line) })
     } finally {
       trainLog.close()
     }

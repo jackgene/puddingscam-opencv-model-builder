@@ -1,1 +1,1 @@
-sbt -Delm.debug=true run -J-Djava.library.path=conf/native/
+./sbt -Delm.debug=true run -J-Djava.library.path=conf/native/

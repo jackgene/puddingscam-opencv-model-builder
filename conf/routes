@@ -11,7 +11,7 @@ GET     /image/*path                controllers.Application.showImage(path: Stri
 GET     /metadata/*path             controllers.Application.showMetadata(path: String)
 GET     /annotation/*path           controllers.Application.showAnnotation(path: String)
 POST    /annotation/*path           controllers.Application.newAnnotation(path: String)
-GET     /train                      controllers.Application.trainModel(size: Int)
+GET     /train/:label               controllers.Application.trainModel(label: String, size: Int)
 
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file               controllers.Assets.versioned(path="/public", file: Asset)

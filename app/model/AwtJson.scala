@@ -3,7 +3,7 @@ package model
 import java.awt.{Dimension, Rectangle}
 
 import play.api.libs.functional.syntax._
-import play.api.libs.json.{Format, JsPath, Writes}
+import play.api.libs.json.{Format, JsPath}
 
 object AwtJson {
   implicit val dimensionFormat: Format[Dimension] = (

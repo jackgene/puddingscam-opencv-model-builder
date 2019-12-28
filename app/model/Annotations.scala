@@ -2,7 +2,8 @@ package model
 
 import java.awt.Rectangle
 
-import play.api.libs.json.{Format, Json}
+import play.api.libs.functional.syntax._
+import play.api.libs.json.{Format, JsPath, Json}
 
 object Annotation {
   import AwtJson.rectangleFormat
@@ -15,8 +16,15 @@ case class Annotation(
 )
 
 object Annotations {
-  implicit val annotationsFormat: Format[Annotations] = Json.format[Annotations]
+  implicit val annotationsFormat: Format[Annotations] = (
+    (JsPath \ "annotations").format[Seq[Annotation]] and
+    (JsPath \ "unused").formatNullable[String] // Play JSON needs at least two fields to use combinators
+  )(
+    (annotations: Seq[Annotation], _: Option[String]) => Annotations(annotations),
+    (annotations: Annotations) => (annotations.annotations, None)
+  )
 }
 case class Annotations(
-  annotations: Seq[Annotation]
+  annotations: Seq[Annotation],
+  lastSaved: Long = 0L
 )
