@@ -673,6 +673,9 @@ subscriptions model = Sub.none
 shapesView : (Int -> Int) -> Maybe MouseDragState -> Shapes -> List (Html Msg)
 shapesView scaleDown mouseDragState shapes =
   let
+    pixelSize : Int -> Int
+    pixelSize size = max 1 ((scaleDown size) - 4)
+
     faceRect : Rectangle
     faceRect =
       case shapes of
@@ -698,8 +701,8 @@ shapesView scaleDown mouseDragState shapes =
         , style
           [ ( "left", toString (scaleDown topLeft.xPixel) ++ "px" )
           , ( "top", toString (scaleDown topLeft.yPixel) ++ "px" )
-          , ( "width", toString ((scaleDown dimension.widthPixel) - 4) ++ "px" )
-          , ( "height", toString ((scaleDown dimension.heightPixel) - 4) ++ "px" )
+          , ( "width", toString (pixelSize dimension.widthPixel) ++ "px" )
+          , ( "height", toString (pixelSize dimension.heightPixel) ++ "px" )
           , let
               cursor : String
               cursor =
@@ -759,8 +762,8 @@ shapesView scaleDown mouseDragState shapes =
               , style
                 [ ( "left", toString ((scaleDown topLeft.xPixel) - 2) ++ "px" )
                 , ( "top", toString ((scaleDown topLeft.yPixel) - 2) ++ "px" )
-                , ( "width", toString ((scaleDown dimension.widthPixel) - 4) ++ "px" )
-                , ( "height", toString ((scaleDown dimension.heightPixel) - 4) ++ "px" )
+                , ( "width", toString (pixelSize dimension.widthPixel) ++ "px" )
+                , ( "height", toString (pixelSize dimension.heightPixel) ++ "px" )
                 , let
                     cursor : String
                     cursor =
