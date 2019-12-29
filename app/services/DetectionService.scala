@@ -3,7 +3,7 @@ package services
 import java.awt.Rectangle
 import java.awt.image.BufferedImage
 import java.io.{File, FileWriter, PrintWriter}
-import java.nio.file.Files
+import java.nio.file.{Files, Path}
 import java.util.Comparator
 
 import javax.imageio.ImageIO
@@ -91,45 +91,64 @@ class DetectionService @Inject()(cfg: Configuration, imageService: ImageService)
     }
     val numPos: Int = Source.fromFile(infoFile).getLines().length
 
-    val bgFile = new File(labelTrainingDir, "bg.txt")
-    val bgFileWriter = new PrintWriter(new FileWriter(bgFile, /*append=*/true))
-    try {
-      val bgDir = new File(labelTrainingDir, "bg")
+    val bgDir = new File(labelTrainingDir, "bg")
+    bgDir.mkdirs()
 
-      for {
-        (path: String, annotations: Annotations) <- allAnnotations
-        img: BufferedImage <- imageService.getImage(path)
-        rects: Set[Rectangle] = annotations.annotations.filter(_.label == label).map(_.shape).toSet
-        if rects.nonEmpty
-        outDir = new File(bgDir, path.replace(" ", "%20")) // OpenCV CLI tools can't handle spaces
-        _ = if (outDir.exists && outDir.lastModified < annotations.lastSaved)
-          Files.walk(outDir.toPath).
-          sorted(Comparator.reverseOrder()).
-          forEach(Files.delete _)
-        if !outDir.exists()
-        _ = outDir.mkdirs()
-        size: Int = rects.map(_.width).max
-        step: Int = size / 2
-        margin: Int = size * 3 / 4
-        bounds: Rectangle <-
-          if (label == "eye") annotations.annotations.find(_.label == "face").map(_.shape)
-          else Option(img.getRaster.getBounds)
-        relX: Int <- 0 to (bounds.width - size) by step
-        x = relX + bounds.x
-        relY: Int <- 0 to (bounds.height - size) by step
-        y = relY + bounds.y
-        if rects.forall { rect: Rectangle =>
-          x < rect.x - margin || x >= rect.x + margin || y < rect.y - margin || y >= rect.y + margin
+    for {
+      (path: String, annotations: Annotations) <- allAnnotations
+      rects: Set[Rectangle] = annotations.annotations.filter(_.label == label).map(_.shape).toSet
+      if rects.nonEmpty
+      outDir = new File(bgDir, path.replace(" ", "%20")) // OpenCV CLI tools can't handle spaces
+      _ = if (outDir.exists && outDir.lastModified < annotations.lastSaved)
+        Files.walk(outDir.toPath).
+        sorted(Comparator.reverseOrder()).
+        forEach(Files.delete _)
+      if !outDir.exists()
+      _ = outDir.mkdirs()
+      img: BufferedImage <- imageService.getImage(path)
+      size: Int = rects.map(_.width).max
+      step: Int = size / 2
+      margin: Int = size * 3 / 4
+      bounds: Rectangle <-
+        if (label == "eye") annotations.annotations.find(_.label == "face").map(_.shape)
+        else Option(img.getRaster.getBounds)
+    } {
+      val imgBgFileWriter = new PrintWriter(new File(outDir, "bg.txt"))
+      try {
+        for {
+          relX: Int <- 0 to (bounds.width - size) by step
+          x = relX + bounds.x
+          relY: Int <- 0 to (bounds.height - size) by step
+          y = relY + bounds.y
+          if rects.forall { rect: Rectangle =>
+            x < rect.x - margin || x >= rect.x + margin || y < rect.y - margin || y >= rect.y + margin
+          }
+        } {
+          val imgOutFile = new File(outDir, f"y${y}%04d_x${x}%04d.jpg")
+          ImageIO.write(img.getSubimage(x, y, size, size), "jpeg", imgOutFile)
+          imgBgFileWriter.println(imgOutFile.getAbsolutePath)
         }
-      } {
-        val imgOutFile = new File(outDir, f"y${y}%04d_x${x}%04d.jpg")
-        ImageIO.write(img.getSubimage(x, y, size, size), "jpeg", imgOutFile)
-        bgFileWriter.println(imgOutFile.getAbsolutePath)
+      } finally {
+        imgBgFileWriter.close()
       }
-    } finally {
-      bgFileWriter.close()
     }
-    val numNeg: Int = Source.fromFile(bgFile).getLines().length
+    val bgFile = new File(labelTrainingDir, "bg.txt")
+    val bgFileWriter = new PrintWriter(new FileWriter(bgFile))
+    val numNeg: Int =
+      try {
+        import scala.jdk.CollectionConverters._
+        Files.walk(bgDir.toPath).iterator.asScala.
+          filter(_.endsWith("bg.txt")).
+          flatMap { bgFilePath: Path =>
+            Files.readAllLines(bgFilePath).asScala
+          }.
+          foldLeft(0) { (count: Int, line: String) =>
+            bgFileWriter.println(line)
+            count + 1
+          }
+      } finally {
+        bgFileWriter.close()
+      }
 
     val modelName = s"model_${objectSizePx}x${objectSizePx}_run${System.currentTimeMillis}"
     val modelDir = new File(labelTrainingDir, modelName)
