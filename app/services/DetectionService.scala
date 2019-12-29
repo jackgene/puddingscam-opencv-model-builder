@@ -12,7 +12,6 @@ import model.{Annotation, Annotations}
 import play.api.Configuration
 
 import scala.collection.immutable.ArraySeq
-import scala.io.Source
 import scala.jdk.CollectionConverters._
 import scala.sys.process._
 
@@ -70,6 +69,7 @@ class DetectionService @Inject()(cfg: Configuration, imageService: ImageService)
 
     // Prepare foreground images and metadata
     val fgDir = new File(labelTrainingDir, "fg")
+    fgDir.mkdirs()
     for {
       (path: String, annotations: Annotations) <- allAnnotations
       openCvPath: String = path.replace(" ", "%20") // OpenCV CLI tools can't handle spaces
@@ -90,16 +90,16 @@ class DetectionService @Inject()(cfg: Configuration, imageService: ImageService)
         imgInfoFileWriter.close()
       }
     }
-    val infoFile = new File(labelTrainingDir, "info.dat")
-    val infoFileWriter = new PrintWriter(new FileWriter(infoFile))
+    val infoFileWriter = new PrintWriter(new FileWriter(new File(labelTrainingDir, "info.dat")))
     val numPos: Int =
       try {
         Files.walk(fgDir.toPath).iterator.asScala.
           filter(_.getFileName.toString.endsWith("info.dat")).
-          foldLeft(0) { (count: Int, imgInfoFilePath: Path) =>
-            infoFileWriter.print(
-              Source.fromFile(imgInfoFilePath.toFile).mkString
-            )
+          flatMap { path: Path =>
+            Files.readAllLines(path).asScala
+          }.
+          foldLeft(0) { (count: Int, line: String) =>
+            infoFileWriter.println(line)
             count + 1
           }
       } finally {
@@ -109,7 +109,6 @@ class DetectionService @Inject()(cfg: Configuration, imageService: ImageService)
     // Prepare background images and metadata
     val bgDir = new File(labelTrainingDir, "bg")
     bgDir.mkdirs()
-
     for {
       (path: String, annotations: Annotations) <- allAnnotations
       rects: Set[Rectangle] = annotations.annotations.filter(_.label == label).map(_.shape).toSet
@@ -148,15 +147,14 @@ class DetectionService @Inject()(cfg: Configuration, imageService: ImageService)
         imgBgFileWriter.close()
       }
     }
-    val bgFile = new File(labelTrainingDir, "bg.txt")
-    val bgFileWriter = new PrintWriter(new FileWriter(bgFile))
+    val bgFileWriter = new PrintWriter(new FileWriter(new File(labelTrainingDir, "bg.txt")))
     val numNeg: Int =
       try {
         import scala.jdk.CollectionConverters._
         Files.walk(bgDir.toPath).iterator.asScala.
           filter(_.endsWith("bg.txt")).
-          flatMap { bgFilePath: Path =>
-            Files.readAllLines(bgFilePath).asScala
+          flatMap { path: Path =>
+            Files.readAllLines(path).asScala
           }.
           foldLeft(0) { (count: Int, line: String) =>
             bgFileWriter.println(line)
