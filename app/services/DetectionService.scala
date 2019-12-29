@@ -13,6 +13,7 @@ import play.api.Configuration
 
 import scala.collection.immutable.ArraySeq
 import scala.io.Source
+import scala.jdk.CollectionConverters._
 import scala.sys.process._
 
 @Singleton
@@ -63,34 +64,49 @@ class DetectionService @Inject()(cfg: Configuration, imageService: ImageService)
   }
 
   def trainModel(label: String, objectSizePx: Int): Unit = {
-    val allAnnotations: Seq[(String, Annotations)] = getAllAnnotations(annotationsDir)
-
     val labelTrainingDir = new File(trainingDir, label)
     if (!labelTrainingDir.exists) labelTrainingDir.mkdirs()
-    val infoFile = new File(labelTrainingDir, "info.dat")
-    val infoFileWriter = new PrintWriter(new FileWriter(infoFile, /*append=*/true))
-    try {
-      val fgDir = new File(labelTrainingDir, "fg")
+    val allAnnotations: Seq[(String, Annotations)] = getAllAnnotations(annotationsDir)
 
-      for {
-        (path: String, annotations: Annotations) <- allAnnotations
-        (annotation: Annotation, idx: Int) <- annotations.annotations.filter(_.label == label).zipWithIndex
-        outFile = new File(fgDir, s"${path.replace(" ", "%20")}.${idx}.jpg") // OpenCV CLI tools can't handle spaces
-        if !outFile.exists() || outFile.lastModified < annotations.lastSaved
-        _ = outFile.getParentFile.mkdirs()
-        img: BufferedImage <- imageService.getImage(path)
-      } {
-        val rect: Rectangle = annotation.shape
-        ImageIO.write(img.getSubimage(rect.x, rect.y, rect.width, rect.height), "jpeg", outFile)
-        infoFileWriter.println(
+    // Prepare foreground images and metadata
+    val fgDir = new File(labelTrainingDir, "fg")
+    for {
+      (path: String, annotations: Annotations) <- allAnnotations
+      openCvPath: String = path.replace(" ", "%20") // OpenCV CLI tools can't handle spaces
+      (annotation: Annotation, idx: Int) <- annotations.annotations.filter(_.label == label).zipWithIndex
+      outFile = new File(fgDir, s"${openCvPath}.${idx}.jpg")
+      if !outFile.exists() || outFile.lastModified < annotations.lastSaved
+      _ = outFile.getParentFile.mkdirs()
+      imgInfoFileWriter = new PrintWriter(new FileWriter(new File(fgDir, s"${openCvPath}.${idx}.info.dat")))
+      img: BufferedImage <- imageService.getImage(path)
+    } {
+      val rect: Rectangle = annotation.shape
+      ImageIO.write(img.getSubimage(rect.x, rect.y, rect.width, rect.height), "jpeg", outFile)
+      try {
+        imgInfoFileWriter.println(
           s"${outFile.getAbsolutePath} 1 0 0 ${rect.width} ${rect.height}"
         )
+      } finally {
+        imgInfoFileWriter.close()
       }
-    } finally {
-      infoFileWriter.close()
     }
-    val numPos: Int = Source.fromFile(infoFile).getLines().length
+    val infoFile = new File(labelTrainingDir, "info.dat")
+    val infoFileWriter = new PrintWriter(new FileWriter(infoFile))
+    val numPos: Int =
+      try {
+        Files.walk(fgDir.toPath).iterator.asScala.
+          filter(_.getFileName.toString.endsWith("info.dat")).
+          foldLeft(0) { (count: Int, imgInfoFilePath: Path) =>
+            infoFileWriter.print(
+              Source.fromFile(imgInfoFilePath.toFile).mkString
+            )
+            count + 1
+          }
+      } finally {
+        infoFileWriter.close()
+      }
 
+    // Prepare background images and metadata
     val bgDir = new File(labelTrainingDir, "bg")
     bgDir.mkdirs()
 
