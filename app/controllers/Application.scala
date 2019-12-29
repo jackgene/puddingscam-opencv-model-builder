@@ -119,6 +119,6 @@ class Application @Inject()(
 
   def trainModel(label: String, objectSizePx: Int): Action[AnyContent] = Action {
     detectionService.trainModel(label, objectSizePx)
-    NoContent
+    Ok(s"Trained model for ${label} with object size ${objectSizePx}")
   }
 }
