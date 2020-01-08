@@ -15,10 +15,13 @@ hr {
   margin-right: 8px;
 }
 div.content-container {
+  position: relative;
   flex: 1 1 auto;
   overflow: hidden;
 }
 div.content-scrollable {
+  position: absolute;
+  width: 100%;
   height: 100%;
   overflow: scroll;
 }
