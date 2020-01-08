@@ -10417,11 +10417,15 @@ var _user$project$Main$shapesView = F3(
 var _user$project$Main$view = function (model) {
 	return A2(
 		_elm_lang$html$Html$div,
-		{ctor: '[]'},
+		{
+			ctor: '::',
+			_0: _elm_lang$html$Html_Attributes$id('app'),
+			_1: {ctor: '[]'}
+		},
 		{
 			ctor: '::',
 			_0: A2(
-				_elm_lang$html$Html$p,
+				_elm_lang$html$Html$div,
 				{
 					ctor: '::',
 					_0: _elm_lang$html$Html_Attributes$id('pathNavigation'),
@@ -10485,321 +10489,305 @@ var _user$project$Main$view = function (model) {
 								};
 							},
 							pathElems),
-						function () {
-							var _p20 = _elm_lang$core$List$head(pathReversed);
-							if (_p20.ctor === 'Just') {
-								return {
-									ctor: '::',
-									_0: _elm_lang$html$Html$text(_p20._0),
-									_1: {ctor: '[]'}
-								};
-							} else {
-								return {ctor: '[]'};
-							}
-						}());
+						A2(
+							_elm_lang$core$Basics_ops['++'],
+							function () {
+								var _p20 = _elm_lang$core$List$head(pathReversed);
+								if (_p20.ctor === 'Just') {
+									return {
+										ctor: '::',
+										_0: _elm_lang$html$Html$text(_p20._0),
+										_1: {ctor: '[]'}
+									};
+								} else {
+									return {ctor: '[]'};
+								}
+							}(),
+							{
+								ctor: '::',
+								_0: A2(
+									_elm_lang$html$Html$hr,
+									{ctor: '[]'},
+									{ctor: '[]'}),
+								_1: {ctor: '[]'}
+							}));
 				}()),
 			_1: {
 				ctor: '::',
 				_0: A2(
-					_elm_lang$html$Html$hr,
-					{ctor: '[]'},
-					{ctor: '[]'}),
+					_elm_lang$html$Html$div,
+					{
+						ctor: '::',
+						_0: _elm_lang$html$Html_Attributes$id('message'),
+						_1: {ctor: '[]'}
+					},
+					A2(
+						_elm_lang$core$List$filterMap,
+						_elm_lang$core$Maybe$map(
+							function (message) {
+								var _p21 = message;
+								if (_p21.ctor === 'Ok') {
+									return A2(
+										_elm_lang$html$Html$div,
+										{
+											ctor: '::',
+											_0: _elm_lang$html$Html_Attributes$class('info'),
+											_1: {ctor: '[]'}
+										},
+										{
+											ctor: '::',
+											_0: _elm_lang$html$Html$text(_p21._0),
+											_1: {ctor: '[]'}
+										});
+								} else {
+									return A2(
+										_elm_lang$html$Html$div,
+										{
+											ctor: '::',
+											_0: _elm_lang$html$Html_Attributes$class('error'),
+											_1: {ctor: '[]'}
+										},
+										{
+											ctor: '::',
+											_0: _elm_lang$html$Html$text(_p21._0),
+											_1: {ctor: '[]'}
+										});
+								}
+							}),
+						{
+							ctor: '::',
+							_0: model.message,
+							_1: {ctor: '[]'}
+						})),
 				_1: {
 					ctor: '::',
 					_0: A2(
 						_elm_lang$html$Html$div,
 						{
 							ctor: '::',
-							_0: _elm_lang$html$Html_Attributes$id('message'),
+							_0: _elm_lang$html$Html_Attributes$class('content-container'),
 							_1: {ctor: '[]'}
 						},
 						A2(
-							_elm_lang$core$List$filterMap,
-							_elm_lang$core$Maybe$map(
-								function (message) {
-									var _p21 = message;
-									if (_p21.ctor === 'Ok') {
-										return A2(
-											_elm_lang$html$Html$div,
-											{
-												ctor: '::',
-												_0: _elm_lang$html$Html_Attributes$class('info'),
-												_1: {ctor: '[]'}
-											},
-											{
-												ctor: '::',
-												_0: _elm_lang$html$Html$text(_p21._0),
-												_1: {ctor: '[]'}
-											});
-									} else {
-										return A2(
-											_elm_lang$html$Html$div,
-											{
-												ctor: '::',
-												_0: _elm_lang$html$Html_Attributes$class('error'),
-												_1: {ctor: '[]'}
-											},
-											{
-												ctor: '::',
-												_0: _elm_lang$html$Html$text(_p21._0),
-												_1: {ctor: '[]'}
-											});
-									}
-								}),
+							_elm_lang$core$Basics_ops['++'],
+							A2(
+								_elm_lang$core$List$map,
+								_elm_lang$core$Basics$always(
+									A2(
+										_elm_lang$html$Html$div,
+										{
+											ctor: '::',
+											_0: _elm_lang$html$Html_Attributes$class('content-placeholder'),
+											_1: {ctor: '[]'}
+										},
+										{ctor: '[]'})),
+								model.path),
 							{
 								ctor: '::',
-								_0: model.message,
-								_1: {ctor: '[]'}
-							})),
-					_1: {
-						ctor: '::',
-						_0: A2(
-							_elm_lang$html$Html$div,
-							{ctor: '[]'},
-							function () {
-								var _p22 = model.workingAnnotation;
-								if (_p22.ctor === 'Just') {
-									var _p30 = _p22._0.shapes;
-									var _p29 = _p22._0.mouseDragState;
-									var _p28 = _p22._0.imageSize;
-									return {
-										ctor: '::',
-										_0: A2(
+								_0: function () {
+									var _p22 = model.workingAnnotation;
+									if (_p22.ctor === 'Just') {
+										var _p30 = _p22._0.shapes;
+										var _p29 = _p22._0.mouseDragState;
+										var _p28 = _p22._0.imageSize;
+										return A2(
 											_elm_lang$html$Html$div,
-											A2(
-												_elm_lang$core$Basics_ops['++'],
-												{
-													ctor: '::',
-													_0: _elm_lang$html$Html_Attributes$id('annotation'),
-													_1: {
-														ctor: '::',
-														_0: _elm_lang$html$Html_Attributes$style(
-															{
-																ctor: '::',
-																_0: {ctor: '_Tuple2', _0: 'position', _1: 'relative'},
-																_1: {ctor: '[]'}
-															}),
-														_1: {ctor: '[]'}
-													}
-												},
-												function () {
-													var _p23 = _p29;
-													if (_p23.ctor === 'Nothing') {
-														var _p24 = _p30;
-														if (_p24.ctor === 'Nothing') {
-															return {
-																ctor: '::',
-																_0: _mpizenberg$elm_pointer_events$Mouse$onDown(_user$project$Main$DragToCreateBoxStart),
-																_1: {
-																	ctor: '::',
-																	_0: _elm_lang$html$Html_Attributes$style(
-																		{
-																			ctor: '::',
-																			_0: {ctor: '_Tuple2', _0: 'cursor', _1: 'crosshair'},
-																			_1: {ctor: '[]'}
-																		}),
-																	_1: {ctor: '[]'}
-																}
-															};
-														} else {
-															return {
-																ctor: '::',
-																_0: _mpizenberg$elm_pointer_events$Mouse$onDown(
-																	_elm_lang$core$Basics$always(_user$project$Main$DragStop)),
-																_1: {ctor: '[]'}
-															};
-														}
-													} else {
-														if (_p23._0.ctor === 'Resizing') {
-															return {
-																ctor: '::',
-																_0: _mpizenberg$elm_pointer_events$Mouse$onMove(
-																	function (_p25) {
-																		return _user$project$Main$DragToResizeBoxMove(
-																			function (_) {
-																				return _.clientPos;
-																			}(_p25));
-																	}),
-																_1: {
-																	ctor: '::',
-																	_0: _mpizenberg$elm_pointer_events$Mouse$onUp(
-																		_elm_lang$core$Basics$always(_user$project$Main$DragStop)),
-																	_1: {ctor: '[]'}
-																}
-															};
-														} else {
-															return {
-																ctor: '::',
-																_0: _mpizenberg$elm_pointer_events$Mouse$onMove(
-																	function (_p26) {
-																		return _user$project$Main$DragToMoveBoxMove(
-																			function (_) {
-																				return _.clientPos;
-																			}(_p26));
-																	}),
-																_1: {
-																	ctor: '::',
-																	_0: _mpizenberg$elm_pointer_events$Mouse$onUp(
-																		_elm_lang$core$Basics$always(_user$project$Main$DragStop)),
-																	_1: {ctor: '[]'}
-																}
-															};
-														}
-													}
-												}()),
 											{
 												ctor: '::',
-												_0: A2(
-													_elm_lang$html$Html$img,
-													{
-														ctor: '::',
-														_0: _elm_lang$html$Html_Attributes$src(
-															A2(
-																_elm_lang$core$Basics_ops['++'],
-																'/image',
-																A2(
-																	_elm_lang$core$Basics_ops['++'],
-																	_user$project$Main$pathSpec(model.path),
-																	'.jpg'))),
-														_1: {
-															ctor: '::',
-															_0: _elm_lang$html$Html_Attributes$width(_user$project$Main$scaledWidthPx),
-															_1: {ctor: '[]'}
-														}
-													},
-													{ctor: '[]'}),
-												_1: function () {
-													var _p27 = _p30;
-													if (_p27.ctor === 'Just') {
-														return A3(_user$project$Main$shapesView, _p22._0.scaleDown, _p29, _p27._0);
-													} else {
-														return {ctor: '[]'};
-													}
-												}()
-											}),
-										_1: {
-											ctor: '::',
-											_0: A2(
-												_elm_lang$html$Html$div,
-												{ctor: '[]'},
-												{
-													ctor: '::',
-													_0: A2(
-														_elm_lang$html$Html$button,
-														{
-															ctor: '::',
-															_0: _elm_lang$html$Html_Events$onClick(_user$project$Main$SubmitAnnotationRequest),
-															_1: {
-																ctor: '::',
-																_0: _elm_lang$html$Html_Attributes$disabled(!_p22._0.modified),
-																_1: {ctor: '[]'}
-															}
-														},
-														{
-															ctor: '::',
-															_0: _elm_lang$html$Html$text('Save'),
-															_1: {ctor: '[]'}
-														}),
-													_1: {ctor: '[]'}
-												}),
-											_1: {
+												_0: _elm_lang$html$Html_Attributes$class('content-scrollable'),
+												_1: {ctor: '[]'}
+											},
+											{
 												ctor: '::',
 												_0: A2(
 													_elm_lang$html$Html$div,
-													{ctor: '[]'},
+													A2(
+														_elm_lang$core$Basics_ops['++'],
+														{
+															ctor: '::',
+															_0: _elm_lang$html$Html_Attributes$id('annotation'),
+															_1: {
+																ctor: '::',
+																_0: _elm_lang$html$Html_Attributes$style(
+																	{
+																		ctor: '::',
+																		_0: {ctor: '_Tuple2', _0: 'position', _1: 'relative'},
+																		_1: {ctor: '[]'}
+																	}),
+																_1: {ctor: '[]'}
+															}
+														},
+														function () {
+															var _p23 = _p29;
+															if (_p23.ctor === 'Nothing') {
+																var _p24 = _p30;
+																if (_p24.ctor === 'Nothing') {
+																	return {
+																		ctor: '::',
+																		_0: _mpizenberg$elm_pointer_events$Mouse$onDown(_user$project$Main$DragToCreateBoxStart),
+																		_1: {
+																			ctor: '::',
+																			_0: _elm_lang$html$Html_Attributes$style(
+																				{
+																					ctor: '::',
+																					_0: {ctor: '_Tuple2', _0: 'cursor', _1: 'crosshair'},
+																					_1: {ctor: '[]'}
+																				}),
+																			_1: {ctor: '[]'}
+																		}
+																	};
+																} else {
+																	return {
+																		ctor: '::',
+																		_0: _mpizenberg$elm_pointer_events$Mouse$onDown(
+																			_elm_lang$core$Basics$always(_user$project$Main$DragStop)),
+																		_1: {ctor: '[]'}
+																	};
+																}
+															} else {
+																if (_p23._0.ctor === 'Resizing') {
+																	return {
+																		ctor: '::',
+																		_0: _mpizenberg$elm_pointer_events$Mouse$onMove(
+																			function (_p25) {
+																				return _user$project$Main$DragToResizeBoxMove(
+																					function (_) {
+																						return _.clientPos;
+																					}(_p25));
+																			}),
+																		_1: {
+																			ctor: '::',
+																			_0: _mpizenberg$elm_pointer_events$Mouse$onUp(
+																				_elm_lang$core$Basics$always(_user$project$Main$DragStop)),
+																			_1: {ctor: '[]'}
+																		}
+																	};
+																} else {
+																	return {
+																		ctor: '::',
+																		_0: _mpizenberg$elm_pointer_events$Mouse$onMove(
+																			function (_p26) {
+																				return _user$project$Main$DragToMoveBoxMove(
+																					function (_) {
+																						return _.clientPos;
+																					}(_p26));
+																			}),
+																		_1: {
+																			ctor: '::',
+																			_0: _mpizenberg$elm_pointer_events$Mouse$onUp(
+																				_elm_lang$core$Basics$always(_user$project$Main$DragStop)),
+																			_1: {ctor: '[]'}
+																		}
+																	};
+																}
+															}
+														}()),
 													{
 														ctor: '::',
-														_0: _elm_lang$html$Html$text(
-															A2(
-																_elm_lang$core$Basics_ops['++'],
-																'Image size: ',
-																A2(
-																	_elm_lang$core$Basics_ops['++'],
-																	_elm_lang$core$Basics$toString(_p28.widthPixel),
+														_0: A2(
+															_elm_lang$html$Html$img,
+															{
+																ctor: '::',
+																_0: _elm_lang$html$Html_Attributes$src(
 																	A2(
 																		_elm_lang$core$Basics_ops['++'],
-																		'x',
-																		_elm_lang$core$Basics$toString(_p28.heightPixel))))),
-														_1: {ctor: '[]'}
+																		'/image',
+																		A2(
+																			_elm_lang$core$Basics_ops['++'],
+																			_user$project$Main$pathSpec(model.path),
+																			'.jpg'))),
+																_1: {
+																	ctor: '::',
+																	_0: _elm_lang$html$Html_Attributes$width(_user$project$Main$scaledWidthPx),
+																	_1: {ctor: '[]'}
+																}
+															},
+															{ctor: '[]'}),
+														_1: function () {
+															var _p27 = _p30;
+															if (_p27.ctor === 'Just') {
+																return A3(_user$project$Main$shapesView, _p22._0.scaleDown, _p29, _p27._0);
+															} else {
+																return {ctor: '[]'};
+															}
+														}()
 													}),
-												_1: {ctor: '[]'}
-											}
-										}
-									};
-								} else {
-									var _p31 = A2(
-										_elm_lang$core$List$partition,
-										function (_) {
-											return _.dir;
-										},
-										model.fileItems);
-									var dirs = _p31._0;
-									var files = _p31._1;
-									return {
-										ctor: '::',
-										_0: A2(
-											_elm_lang$html$Html$ul,
-											{ctor: '[]'},
-											A2(
-												_elm_lang$core$List$map,
-												function (dir) {
-													return A2(
-														_elm_lang$html$Html$li,
+												_1: {
+													ctor: '::',
+													_0: A2(
+														_elm_lang$html$Html$div,
 														{ctor: '[]'},
 														{
 															ctor: '::',
 															_0: A2(
-																_elm_lang$html$Html$a,
+																_elm_lang$html$Html$button,
 																{
 																	ctor: '::',
-																	_0: _elm_lang$html$Html_Attributes$href(
-																		A2(
-																			_elm_lang$core$Basics_ops['++'],
-																			'#files|',
-																			A2(
-																				_elm_lang$core$Basics_ops['++'],
-																				_user$project$Main$pathSpec(model.path),
-																				A2(
-																					_elm_lang$core$Basics_ops['++'],
-																					'/',
-																					A2(_elm_lang$core$Basics_ops['++'], dir.name, '/'))))),
-																	_1: {ctor: '[]'}
+																	_0: _elm_lang$html$Html_Events$onClick(_user$project$Main$SubmitAnnotationRequest),
+																	_1: {
+																		ctor: '::',
+																		_0: _elm_lang$html$Html_Attributes$disabled(!_p22._0.modified),
+																		_1: {ctor: '[]'}
+																	}
 																},
 																{
 																	ctor: '::',
-																	_0: _elm_lang$html$Html$text(dir.name),
+																	_0: _elm_lang$html$Html$text('Save'),
 																	_1: {ctor: '[]'}
 																}),
 															_1: {ctor: '[]'}
-														});
-												},
-												dirs)),
-										_1: {
-											ctor: '::',
-											_0: A2(
-												_elm_lang$html$Html$hr,
-												{ctor: '[]'},
-												{ctor: '[]'}),
-											_1: {
+														}),
+													_1: {
+														ctor: '::',
+														_0: A2(
+															_elm_lang$html$Html$div,
+															{ctor: '[]'},
+															{
+																ctor: '::',
+																_0: _elm_lang$html$Html$text(
+																	A2(
+																		_elm_lang$core$Basics_ops['++'],
+																		'Image size: ',
+																		A2(
+																			_elm_lang$core$Basics_ops['++'],
+																			_elm_lang$core$Basics$toString(_p28.widthPixel),
+																			A2(
+																				_elm_lang$core$Basics_ops['++'],
+																				'x',
+																				_elm_lang$core$Basics$toString(_p28.heightPixel))))),
+																_1: {ctor: '[]'}
+															}),
+														_1: {ctor: '[]'}
+													}
+												}
+											});
+									} else {
+										var _p31 = A2(
+											_elm_lang$core$List$partition,
+											function (_) {
+												return _.dir;
+											},
+											model.fileItems);
+										var dirs = _p31._0;
+										var files = _p31._1;
+										return A2(
+											_elm_lang$html$Html$div,
+											{
+												ctor: '::',
+												_0: _elm_lang$html$Html_Attributes$class('content-scrollable'),
+												_1: {ctor: '[]'}
+											},
+											{
 												ctor: '::',
 												_0: A2(
-													_elm_lang$html$Html$div,
-													{
-														ctor: '::',
-														_0: _elm_lang$html$Html_Attributes$id(
-															A2(_elm_lang$core$String$join, '|', model.path)),
-														_1: {ctor: '[]'}
-													},
+													_elm_lang$html$Html$ul,
+													{ctor: '[]'},
 													A2(
 														_elm_lang$core$List$map,
-														function (file) {
+														function (dir) {
 															return A2(
-																_elm_lang$html$Html$div,
-																{
-																	ctor: '::',
-																	_0: _elm_lang$html$Html_Attributes$class('thumbnail'),
-																	_1: {ctor: '[]'}
-																},
+																_elm_lang$html$Html$li,
+																{ctor: '[]'},
 																{
 																	ctor: '::',
 																	_0: A2(
@@ -10809,59 +10797,109 @@ var _user$project$Main$view = function (model) {
 																			_0: _elm_lang$html$Html_Attributes$href(
 																				A2(
 																					_elm_lang$core$Basics_ops['++'],
-																					'#annotate|',
+																					'#files|',
 																					A2(
 																						_elm_lang$core$Basics_ops['++'],
 																						_user$project$Main$pathSpec(model.path),
-																						A2(_elm_lang$core$Basics_ops['++'], '/', file.name)))),
+																						A2(
+																							_elm_lang$core$Basics_ops['++'],
+																							'/',
+																							A2(_elm_lang$core$Basics_ops['++'], dir.name, '/'))))),
 																			_1: {ctor: '[]'}
 																		},
 																		{
 																			ctor: '::',
-																			_0: A2(
-																				_elm_lang$html$Html$img,
-																				{
-																					ctor: '::',
-																					_0: _elm_lang$html$Html_Attributes$id(file.name),
-																					_1: {
-																						ctor: '::',
-																						_0: _elm_lang$html$Html_Attributes$src(
-																							A2(
-																								_elm_lang$core$Basics_ops['++'],
-																								'/image',
-																								A2(
-																									_elm_lang$core$Basics_ops['++'],
-																									_user$project$Main$pathSpec(model.path),
-																									A2(
-																										_elm_lang$core$Basics_ops['++'],
-																										'/',
-																										A2(_elm_lang$core$Basics_ops['++'], file.name, '.jpg'))))),
-																						_1: {
-																							ctor: '::',
-																							_0: _elm_lang$html$Html_Attributes$title(file.name),
-																							_1: {
-																								ctor: '::',
-																								_0: _elm_lang$html$Html_Attributes$width(325),
-																								_1: {ctor: '[]'}
-																							}
-																						}
-																					}
-																				},
-																				{ctor: '[]'}),
+																			_0: _elm_lang$html$Html$text(dir.name),
 																			_1: {ctor: '[]'}
 																		}),
 																	_1: {ctor: '[]'}
 																});
 														},
-														files)),
-												_1: {ctor: '[]'}
-											}
-										}
-									};
-								}
-							}()),
-						_1: {ctor: '[]'}
-					}
+														dirs)),
+												_1: {
+													ctor: '::',
+													_0: A2(
+														_elm_lang$html$Html$hr,
+														{ctor: '[]'},
+														{ctor: '[]'}),
+													_1: {
+														ctor: '::',
+														_0: A2(
+															_elm_lang$html$Html$div,
+															{ctor: '[]'},
+															A2(
+																_elm_lang$core$List$map,
+																function (file) {
+																	return A2(
+																		_elm_lang$html$Html$div,
+																		{
+																			ctor: '::',
+																			_0: _elm_lang$html$Html_Attributes$class('thumbnail'),
+																			_1: {ctor: '[]'}
+																		},
+																		{
+																			ctor: '::',
+																			_0: A2(
+																				_elm_lang$html$Html$a,
+																				{
+																					ctor: '::',
+																					_0: _elm_lang$html$Html_Attributes$href(
+																						A2(
+																							_elm_lang$core$Basics_ops['++'],
+																							'#annotate|',
+																							A2(
+																								_elm_lang$core$Basics_ops['++'],
+																								_user$project$Main$pathSpec(model.path),
+																								A2(_elm_lang$core$Basics_ops['++'], '/', file.name)))),
+																					_1: {ctor: '[]'}
+																				},
+																				{
+																					ctor: '::',
+																					_0: A2(
+																						_elm_lang$html$Html$img,
+																						{
+																							ctor: '::',
+																							_0: _elm_lang$html$Html_Attributes$id(file.name),
+																							_1: {
+																								ctor: '::',
+																								_0: _elm_lang$html$Html_Attributes$src(
+																									A2(
+																										_elm_lang$core$Basics_ops['++'],
+																										'/image',
+																										A2(
+																											_elm_lang$core$Basics_ops['++'],
+																											_user$project$Main$pathSpec(model.path),
+																											A2(
+																												_elm_lang$core$Basics_ops['++'],
+																												'/',
+																												A2(_elm_lang$core$Basics_ops['++'], file.name, '.jpg'))))),
+																								_1: {
+																									ctor: '::',
+																									_0: _elm_lang$html$Html_Attributes$title(file.name),
+																									_1: {
+																										ctor: '::',
+																										_0: _elm_lang$html$Html_Attributes$width(325),
+																										_1: {ctor: '[]'}
+																									}
+																								}
+																							}
+																						},
+																						{ctor: '[]'}),
+																					_1: {ctor: '[]'}
+																				}),
+																			_1: {ctor: '[]'}
+																		});
+																},
+																files)),
+														_1: {ctor: '[]'}
+													}
+												}
+											});
+									}
+								}(),
+								_1: {ctor: '[]'}
+							})),
+					_1: {ctor: '[]'}
 				}
 			}
 		});

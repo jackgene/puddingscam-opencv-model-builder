@@ -803,8 +803,8 @@ shapesView scaleDown mouseDragState shapes =
 
 view : Model -> Html Msg
 view model =
-  div []
-  [ p [ id "pathNavigation" ]
+  div [ id "app" ]
+  [ div [ id "pathNavigation" ]
     ( let
         pathReversed : List String
         pathReversed = List.reverse model.path
@@ -825,12 +825,13 @@ view model =
             ]
           )
           pathElems
-        ++case List.head pathReversed of
-          Just lastPathElemName -> [ text lastPathElemName ]
-          Nothing -> []
+        ++( case List.head pathReversed of
+            Just lastPathElemName -> [ text lastPathElemName ]
+            Nothing -> []
+          )
+        ++[ hr [] [] ]
         )
     )
-  , hr [] []
   , div [ id "message" ]
     ( List.filterMap
       ( Maybe.map
@@ -844,81 +845,85 @@ view model =
       )
       [ model.message ]
     )
-  , div []
-    ( case model.workingAnnotation of
-      Just { imageSize, scaleDown, shapes, modified, mouseDragState } ->
-        [ div
-          ( [ id "annotation"
-            , style [ ( "position", "relative" ) ]
-            ]
-          ++case mouseDragState of
-              Nothing ->
-                case shapes of
-                  Nothing ->
-                    [ onDown DragToCreateBoxStart
-                    , style [ ( "cursor", "crosshair" ) ]
-                    ]
-                  _ ->
-                    [ onDown (always DragStop) ]
-              Just (Resizing _ _ _ _ _) ->
-                [ onMove ( .clientPos >> DragToResizeBoxMove )
-                , onUp ( always DragStop )
-                ]
-              Just (Moving _ _ _ _) ->
-                [ onMove ( .clientPos >> DragToMoveBoxMove )
-                , onUp ( always DragStop )
-                ]
-          )
-          ( img
-            [ src ( "/image" ++ pathSpec model.path ++ ".jpg" )
-            , width scaledWidthPx
-            ]
-            []
-          ::case shapes of
-            Just shapes -> shapesView scaleDown mouseDragState shapes
-            Nothing -> []
-          )
-        , div []
-          [ button [ onClick SubmitAnnotationRequest, disabled (not modified) ] [ text "Save" ]
-          ]
-        , div []
-          [ text ("Image size: " ++ (toString imageSize.widthPixel) ++ "x" ++ (toString imageSize.heightPixel)) ]
-        ]
-
-      Nothing ->
-        let
-          (dirs, files) = List.partition .dir model.fileItems
-        in
-          [ ul []
-            ( List.map
-              ( \dir ->
-                li []
-                [ a
-                  [ href ( "#files|" ++ pathSpec model.path ++ "/" ++ dir.name ++ "/" ) ]
-                  [ text dir.name ]
-                ]
-              )
-              dirs
-            )
-          , hr [] []
-          , div [ id (String.join "|" model.path) ]
-            ( List.map
-              (\file ->
-                div [ class "thumbnail" ]
-                [ a [ href ( "#annotate|" ++ pathSpec model.path ++ "/" ++ file.name ) ]
-                  [ img
-                    [ id file.name
-                    , src ( "/image" ++ pathSpec model.path ++ "/" ++ file.name ++ ".jpg" )
-                    , title file.name
-                    , width 325
-                    ]
-                    []
+  , div [ class "content-container" ]
+    ( List.map (always (div [ class "content-placeholder" ] [])) model.path
+    ++[ case model.workingAnnotation of
+        Just { imageSize, scaleDown, shapes, modified, mouseDragState } ->
+          div [ class "content-scrollable" ]
+          [ div
+            ( [ id "annotation"
+              , style [ ( "position", "relative" ) ]
+              ]
+            ++case mouseDragState of
+                Nothing ->
+                  case shapes of
+                    Nothing ->
+                      [ onDown DragToCreateBoxStart
+                      , style [ ( "cursor", "crosshair" ) ]
+                      ]
+                    _ ->
+                      [ onDown (always DragStop) ]
+                Just (Resizing _ _ _ _ _) ->
+                  [ onMove ( .clientPos >> DragToResizeBoxMove )
+                  , onUp ( always DragStop )
                   ]
-                ]
-              )
-              files
+                Just (Moving _ _ _ _) ->
+                  [ onMove ( .clientPos >> DragToMoveBoxMove )
+                  , onUp ( always DragStop )
+                  ]
             )
+            ( img
+              [ src ( "/image" ++ pathSpec model.path ++ ".jpg" )
+              , width scaledWidthPx
+              ]
+              []
+            ::case shapes of
+              Just shapes -> shapesView scaleDown mouseDragState shapes
+              Nothing -> []
+            )
+          , div []
+            [ button [ onClick SubmitAnnotationRequest, disabled (not modified) ] [ text "Save" ]
+            ]
+          , div []
+            [ text ("Image size: " ++ (toString imageSize.widthPixel) ++ "x" ++ (toString imageSize.heightPixel)) ]
           ]
+
+        Nothing ->
+          let
+            (dirs, files) = List.partition .dir model.fileItems
+          in
+            div [ class "content-scrollable" ]
+            [ ul []
+              ( List.map
+                ( \dir ->
+                  li []
+                  [ a
+                    [ href ( "#files|" ++ pathSpec model.path ++ "/" ++ dir.name ++ "/" ) ]
+                    [ text dir.name ]
+                  ]
+                )
+                dirs
+              )
+            , hr [] []
+            , div []
+              ( List.map
+                (\file ->
+                  div [ class "thumbnail" ]
+                  [ a [ href ( "#annotate|" ++ pathSpec model.path ++ "/" ++ file.name ) ]
+                    [ img
+                      [ id file.name
+                      , src ( "/image" ++ pathSpec model.path ++ "/" ++ file.name ++ ".jpg" )
+                      , title file.name
+                      , width 325
+                      ]
+                      []
+                    ]
+                  ]
+                )
+                files
+              )
+            ]
+      ]
     )
   ]
 

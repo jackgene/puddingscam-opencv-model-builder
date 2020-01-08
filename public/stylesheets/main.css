@@ -1,6 +1,29 @@
+html, body, div#app {
+  height: 100%;
+  margin: 0;
+}
 body {
   font-family: sans-serif;
   font-size: 0.9em;
+}
+div#app {
+  display: flex;
+  flex-flow: column;
+  padding: 0 0 0 8px;
+}
+hr {
+  margin-right: 8px;
+}
+div.content-container {
+  flex: 1 1 auto;
+  overflow: hidden;
+}
+div.content-scrollable {
+  height: 100%;
+  overflow: scroll;
+}
+div.content-placeholder {
+  display: none;
 }
 
 /* Listing */
