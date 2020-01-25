@@ -4,6 +4,7 @@ import java.awt.Rectangle
 import java.awt.image.BufferedImage
 import java.io.{File, FileWriter, PrintWriter}
 import java.nio.file.{Files, Path}
+import java.time.LocalDateTime
 import java.util.Comparator
 
 import javax.imageio.ImageIO
@@ -164,7 +165,7 @@ class DetectionService @Inject()(cfg: Configuration, imageService: ImageService)
         bgFileWriter.close()
       }
 
-    val modelName = s"model_${objectSizePx}x${objectSizePx}_run${System.currentTimeMillis}"
+    val modelName = s"model_${objectSizePx}x${objectSizePx}_${LocalDateTime.now}"
     val modelDir = new File(labelTrainingDir, modelName)
     new File(modelDir, "data").mkdirs()
 
@@ -182,13 +183,17 @@ class DetectionService @Inject()(cfg: Configuration, imageService: ImageService)
       vecLog.close()
     }
 
+    val numStages = 20
+    val minHitRate = 0.995
+    // From https://stackoverflow.com/questions/10863560/haar-training-opencv-assertion-failed
+    val numPosTrain = (numPos / (1 + ((numStages - 1) * (1 - minHitRate)))).toInt
     val trainCmd =
       "opencv_traincascade " +
       s"-data ${new File(modelName, "data").getPath} " +
       s"-vec ${new File(modelName, "positive.vec").getPath} " +
       "-bg bg.txt " +
-      s"-numPos ${numPos} -numNeg ${numNeg} " +
-      s"-w ${objectSizePx} -h ${objectSizePx}"
+      s"-numPos ${numPosTrain} -numNeg ${numNeg} -numStages ${numStages} " +
+      s"-w ${objectSizePx} -h ${objectSizePx} -minHitRate ${minHitRate}"
     val trainLogFile = new File(modelDir, "opencv_traincascade.log")
     (s"echo Command: ${trainCmd}" #>> trainLogFile).!
     val trainLog = new PrintWriter(new FileWriter(trainLogFile, /*append=*/true))
