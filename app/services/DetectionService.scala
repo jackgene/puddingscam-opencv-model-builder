@@ -44,6 +44,9 @@ class DetectionService @Inject()(cfg: Configuration, imageService: ImageService)
         newDir
     }
   private val AnnotationsDirPathChars: Int = annotationsDir.getAbsolutePath.length
+  private val OpenCvTrainCascadeOpts: String =
+    cfg.getOptional[String]("puddings-cam.opencv-traincascade.options").
+    getOrElse("")
 
   private def getAllAnnotations(root: File): Seq[(String,Annotations)] = {
     root.listFiles match {
@@ -193,7 +196,8 @@ class DetectionService @Inject()(cfg: Configuration, imageService: ImageService)
       s"-vec ${new File(modelName, "positive.vec").getPath} " +
       "-bg bg.txt " +
       s"-numPos ${numPosTrain} -numNeg ${numNeg} -numStages ${numStages} " +
-      s"-w ${objectSizePx} -h ${objectSizePx} -minHitRate ${minHitRate}"
+      s"-w ${objectSizePx} -h ${objectSizePx} -minHitRate ${minHitRate} " +
+      OpenCvTrainCascadeOpts
     val trainLogFile = new File(modelDir, "opencv_traincascade.log")
     (s"echo Command: ${trainCmd}" #>> trainLogFile).!
     val trainLog = new PrintWriter(new FileWriter(trainLogFile, /*append=*/true))
