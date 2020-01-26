@@ -492,7 +492,7 @@ update msg model =
           Nothing -> Cmd.none
       )
 
-    SubmitAnnotationResponse (Ok metadata) ->
+    SubmitAnnotationResponse (Ok _) ->
       ( { model
         | workingAnnotation =
           Maybe.map

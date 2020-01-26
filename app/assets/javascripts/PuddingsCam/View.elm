@@ -23,7 +23,7 @@ shapesView scaleDown mouseDragState shapes =
     eyeRects : List (ShapeId, Rectangle)
     eyeRects =
       case shapes of
-        FaceOnly faceRect -> []
+        FaceOnly _ -> []
         FaceAndOneEye _ eye1Rect -> [ (Eye1, eye1Rect) ]
         FaceAndTwoEyes _ eye1Rect eye2Rect -> [ (Eye1, eye1Rect), (Eye2, eye2Rect) ]
 
