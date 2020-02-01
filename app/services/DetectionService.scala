@@ -66,6 +66,16 @@ class DetectionService @Inject()(cfg: Configuration, imageService: ImageService)
     }
   }
 
+  private def runWithLogging(cmd: String, workingDir: File, logFile: File): Int = {
+    (s"echo Command: ${cmd}" #>> logFile).!
+    val logWriter = new PrintWriter(new FileWriter(logFile, /*append=*/true))
+    try {
+      Process(cmd, workingDir).!(ProcessLogger { line: String => logWriter.println(line) })
+    } finally {
+      logWriter.close()
+    }
+  }
+
   def trainModel(label: String, objectSizePx: Int): Unit = {
     val labelTrainingDir = new File(trainingDir, label)
     if (!labelTrainingDir.exists) labelTrainingDir.mkdirs()
@@ -178,33 +188,27 @@ class DetectionService @Inject()(cfg: Configuration, imageService: ImageService)
       s"-info info.dat " +
       s"-w ${objectSizePx} -h ${objectSizePx}"
     val vecLogFile = new File(modelDir, "opencv_createsamples.log")
-    (s"echo Command: ${vecCmd}" #>> vecLogFile).!
-    val vecLog = new PrintWriter(new FileWriter(vecLogFile, /*append=*/true))
-    try {
-      Process(vecCmd, labelTrainingDir).!(ProcessLogger { line: String => vecLog.println(line) })
-    } finally {
-      vecLog.close()
-    }
+    runWithLogging(vecCmd, labelTrainingDir, vecLogFile)
 
     val numStages = 20
     val minHitRate = 0.995
     // From https://stackoverflow.com/questions/10863560/haar-training-opencv-assertion-failed
-    val numPosTrain = (numPos / (1 + ((numStages - 1) * (1 - minHitRate)))).toInt
-    val trainCmd =
-      "opencv_traincascade " +
-      s"-data ${new File(modelName, "data").getPath} " +
-      s"-vec ${new File(modelName, "positive.vec").getPath} " +
-      "-bg bg.txt " +
-      s"-numPos ${numPosTrain} -numNeg ${numNeg} -numStages ${numStages} " +
-      s"-w ${objectSizePx} -h ${objectSizePx} -minHitRate ${minHitRate} " +
-      OpenCvTrainCascadeOpts
     val trainLogFile = new File(modelDir, "opencv_traincascade.log")
-    (s"echo Command: ${trainCmd}" #>> trainLogFile).!
-    val trainLog = new PrintWriter(new FileWriter(trainLogFile, /*append=*/true))
-    try {
-      Process(trainCmd, labelTrainingDir).!(ProcessLogger { line: String => trainLog.println(line) })
-    } finally {
-      trainLog.close()
-    }
+    val attempts: Int =
+      ((numPos / (1 + ((numStages - 1) * (1 - minHitRate)))).toInt to (numPos * 0.8).toInt by -1).iterator.
+      map { numPosTrain: Int =>
+        val trainCmd =
+          "opencv_traincascade " +
+            s"-data ${new File(modelName, "data").getPath} " +
+            s"-vec ${new File(modelName, "positive.vec").getPath} " +
+            "-bg bg.txt " +
+            s"-numPos ${numPosTrain} -numNeg ${numNeg} -numStages ${numStages} " +
+            s"-w ${objectSizePx} -h ${objectSizePx} -minHitRate ${minHitRate} " +
+            OpenCvTrainCascadeOpts
+        runWithLogging(trainCmd, labelTrainingDir, trainLogFile)
+      }.
+      takeWhile(_ != 0).
+      size
+    (s"echo Training complete after ${attempts} failed attempts" #>> trainLogFile).!
   }
 }
