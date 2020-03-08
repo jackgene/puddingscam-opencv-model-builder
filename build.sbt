@@ -5,13 +5,15 @@ maintainer := "Jack Leow"
 
 lazy val root = (project in file(".")).enablePlugins(PlayScala)
 
-scalaVersion := "2.13.0"
+scalaVersion := "2.13.1"
 
 resolvers += Resolver.mavenLocal
 
+dependencyOverrides += "com.google.guava" % "guava" % "28.1-jre"
+
 libraryDependencies += guice
+libraryDependencies += "org.bytedeco" % "javacv-platform" % "1.5.2"
 libraryDependencies += "org.libraw" % "jlibraw" % "0.1-SNAPSHOT"
-libraryDependencies += "org.scalatestplus.play" %% "scalatestplus-play" % "4.0.3" % Test
 
 javaOptions in Universal ++= Seq(
   // -J params will be added as jvm parameters
