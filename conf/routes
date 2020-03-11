@@ -5,11 +5,11 @@
 
 # An example controller showing a sample home page
 GET     /                           controllers.Application.index
-GET     /files/                     controllers.Application.listFiles(path: String = ".")
+GET     /files/                     controllers.Application.listFiles(path = ".")
 GET     /files/*path                controllers.Application.listFiles(path: String)
 GET     /image/*path                controllers.Application.showImage(path: String)
 GET     /metadata/*path             controllers.Application.showMetadata(path: String)
-GET     /annotation/*path           controllers.Application.showAnnotation(path: String)
+GET     /annotation/*path           controllers.Application.showAnnotation(path: String, suggested: Boolean ?= false)
 POST    /annotation/*path           controllers.Application.newAnnotation(path: String)
 GET     /train/:label               controllers.Application.trainModel(label: String, size: Int)
 

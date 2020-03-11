@@ -10,14 +10,19 @@ import java.util.Comparator
 import javax.imageio.ImageIO
 import javax.inject.{Inject, Singleton}
 import model.{Annotation, Annotations}
+import org.bytedeco.javacv.OpenCVFrameConverter.ToMat
+import org.bytedeco.javacv.{FrameConverter, Java2DFrameConverter}
+import org.bytedeco.opencv.opencv_core.{Mat, Rect, RectVector}
+import org.bytedeco.opencv.opencv_objdetect.CascadeClassifier
 import play.api.Configuration
+import play.api.Logging
 
 import scala.collection.immutable.ArraySeq
 import scala.jdk.CollectionConverters._
 import scala.sys.process._
 
 @Singleton
-class DetectionService @Inject()(cfg: Configuration, imageService: ImageService) {
+class DetectionService @Inject()(cfg: Configuration, imageService: ImageService) extends Logging {
   private val workingDir: File =
     new File(cfg.get[String]("puddings-cam.working-dir.path")) match {
       case existingDir: File if existingDir.exists =>
@@ -210,5 +215,80 @@ class DetectionService @Inject()(cfg: Configuration, imageService: ImageService)
       takeWhile(_ != 0).
       size
     (s"echo Training complete after ${attempts} failed attempts" #>> trainLogFile).!
+  }
+
+  private val bufferedImageToFrame: FrameConverter[BufferedImage] = new Java2DFrameConverter()
+  private val frameToMat: ToMat = new ToMat()
+  private val faceClassifierOpt: Option[CascadeClassifier] =
+    Option(
+      new CascadeClassifier(
+        s"${workingDir}/suggestion/cascade/face/cascade.xml"
+      )
+    ).
+    filterNot(_.empty)
+  private val eyeClassifierOpt: Option[CascadeClassifier] =
+    Option(
+      new CascadeClassifier(
+        s"${workingDir}/suggestion/cascade/eye/cascade.xml"
+      )
+    ).
+    filterNot(_.empty)
+  faceClassifierOpt match {
+    case None =>
+      logger.warn("face cascade classifier not loaded, annotations suggestions will not be available")
+
+    case Some(_) =>
+      eyeClassifierOpt match {
+        case None =>
+          logger.warn("eye cascade classifier not loaded, annotations suggestions for faces only")
+
+        case Some(_) =>
+          logger.info("All cascade classifiers for suggestions loaded")
+      }
+  }
+
+  private implicit val RectOrdering: Ordering[Rect] =
+    Ordering.by{ rect: Rect => rect.width * rect.height }
+  private def openCvDetectMultiscale(classifier: CascadeClassifier, mat: Mat): Seq[Rect] = {
+    val rects: RectVector = new RectVector()
+    classifier.detectMultiScale(mat, rects)
+
+    (0L until rects.size).map(rects.get)
+  }
+
+  def detect(path: String): Option[Annotations] = {
+    for {
+      faceClassifier: CascadeClassifier <- faceClassifierOpt
+      img: BufferedImage <- imageService.getImage(path)
+      mat: Mat = frameToMat.convert(bufferedImageToFrame.convert(img))
+      faces: Seq[Rect] <-
+        openCvDetectMultiscale(faceClassifier, mat) match {
+          case empty: Seq[Rect] if empty.isEmpty => None
+          case nonEmpty: Seq[Rect] => Some(nonEmpty)
+        }
+      largestFace: Rect = faces.max
+    } yield {
+      val eyes: List[Annotation] =
+        for {
+          eyeClassifier: CascadeClassifier <- eyeClassifierOpt.toList
+          rect: Rect <- openCvDetectMultiscale(eyeClassifier, mat.apply(largestFace)).
+            sorted.takeRight(2)
+        } yield Annotation(
+          label = "eye",
+          shape = new Rectangle(
+            largestFace.x + rect.x, largestFace.y + rect.y, rect.width, rect.height
+          )
+        )
+
+      Annotations(
+        annotations =
+          Annotation(
+            label = "face",
+            shape = new Rectangle(
+              largestFace.x, largestFace.y, largestFace.width, largestFace.height
+            )
+          ) :: eyes
+      )
+    }
   }
 }

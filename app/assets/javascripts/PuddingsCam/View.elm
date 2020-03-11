@@ -7,8 +7,8 @@ import Html.Events exposing (onClick)
 import Mouse exposing (onDown, onMove, onUp)
 
 
-shapesView : (Int -> Int) -> Maybe MouseDragState -> Shapes -> List (Html Msg)
-shapesView scaleDown mouseDragState shapes =
+shapesView : (Int -> Int) -> Maybe MouseDragState -> Shapes -> Bool -> List (Html Msg)
+shapesView scaleDown mouseDragState shapes unsaved =
   let
     pixelSize : Int -> Int
     pixelSize size = max 1 ((scaleDown size) - 4)
@@ -34,7 +34,7 @@ shapesView scaleDown mouseDragState shapes =
     dimension = faceRect.size
   in
     [ div
-      ( [ class "shape"
+      ( [ class ("shape" ++ if unsaved then " unsaved" else "")
         , style
           [ ( "left", toString (scaleDown topLeft.xPixel) ++ "px" )
           , ( "top", toString (scaleDown topLeft.yPixel) ++ "px" )
@@ -95,7 +95,7 @@ shapesView scaleDown mouseDragState shapes =
               dimension = eyeRect.size
             in
               div
-              [ class "shape"
+              [ class ("shape" ++ if unsaved then " unsaved" else "")
               , style
                 [ ( "left", toString ((scaleDown topLeft.xPixel) - 2) ++ "px" )
                 , ( "top", toString ((scaleDown topLeft.yPixel) - 2) ++ "px" )
@@ -185,7 +185,7 @@ view model =
   , div [ class "content-container" ]
     ( List.map (always (div [ class "content-placeholder" ] [])) model.path
     ++[ case model.workingAnnotation of
-        Just { imageSize, scaleDown, shapes, modified, mouseDragState } ->
+        Just { imageSize, scaleDown, shapes, unsaved, mouseDragState } ->
           div [ class "content-scrollable" ]
           [ div
             ( [ id "annotation"
@@ -215,11 +215,11 @@ view model =
               ]
               []
             ::case shapes of
-              Just shapes -> shapesView scaleDown mouseDragState shapes
+              Just shapes -> shapesView scaleDown mouseDragState shapes unsaved
               Nothing -> []
             )
           , div []
-            [ button [ onClick SubmitAnnotationRequest, disabled (not modified) ] [ text "Save" ]
+            [ button [ onClick SubmitAnnotationRequest, disabled (not unsaved) ] [ text "Save" ]
             ]
           , div []
             [ text ("Image size: " ++ (toString imageSize.widthPixel) ++ "x" ++ (toString imageSize.heightPixel)) ]

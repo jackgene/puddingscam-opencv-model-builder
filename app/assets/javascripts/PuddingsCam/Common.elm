@@ -50,7 +50,7 @@ type alias WorkingAnnotation =
   , scaleDown : Int -> Int
   , scaleUp : Int -> Int
   , shapes : Maybe Shapes
-  , modified : Bool
+  , unsaved : Bool
   , mouseDragState : Maybe MouseDragState
   }
 type alias Model =
@@ -58,7 +58,7 @@ type alias Model =
   , path : List String
   , fileItems : List FileItem
   , workingAnnotation : Maybe WorkingAnnotation
-  , message: Maybe (Result String String)
+  , message : Maybe (Result String String)
   }
 type alias Annotation =
   { label : String
@@ -79,6 +79,7 @@ type Msg
   | NewFileItems (Result Http.Error FileItems)
   -- Edit annotation page load
   | NewAnnotation (Result Http.Error Annotations)
+  | NewAnnotationSuggestion (Result Http.Error Annotations)
   | NewMetadata (Result Http.Error Metadata)
   -- Edit annotation mouse events
   | DragToCreateBoxStart Mouse.Event

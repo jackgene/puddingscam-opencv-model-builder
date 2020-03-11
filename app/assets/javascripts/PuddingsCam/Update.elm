@@ -96,10 +96,10 @@ update msg model =
                 , scaleDown = always 0
                 , scaleUp = always 0
                 , shapes = Nothing
-                , modified = False
+                , unsaved = False
                 , mouseDragState = Nothing
                 }
-              , message = Nothing
+              , message = Just (Ok "Awaiting metadata and annotations...")
               }
             , Cmd.batch
               [ Http.send NewMetadata
@@ -148,17 +148,55 @@ update msg model =
             }
           )
           model.workingAnnotation
+        , message = Nothing
         }
       , Cmd.none
       )
 
     NewAnnotation (Err err) ->
-      ( case err of
-          (Http.BadStatus ({status})) as err ->
-            if status.code == 404 then model -- No annotation just means the image hasn't been annotated
-            else { model | message = Just (Err (toString err)) }
+      case err of
+        (Http.BadStatus ({status})) as err ->
+          if status.code == 404 then -- No annotation means the image hasn't been annotated, get suggestions
+            ( { model | message = Just (Ok "Awaiting suggested annotations...") }
+            , Http.send NewAnnotationSuggestion
+              ( Http.get ( "/annotation" ++ pathSpec model.path ++ "?suggested=true" ) annotationsDecoder )
+            )
+          else ( { model | message = Just (Err (toString err)) }, Cmd.none )
 
-          _ -> { model | message = Just (Err (toString err)) }
+        _ -> ( { model | message = Just (Err (toString err)) }, Cmd.none )
+
+    NewAnnotationSuggestion (Ok {annotations}) ->
+      ( { model
+        | workingAnnotation =
+          Maybe.map
+          ( \annotation ->
+            { annotation
+            | shapes =
+              case (List.filter ((==) "face" << .label) annotations, List.filter ((==) "eye" << .label) annotations) of
+                ([face], []) ->
+                  Just (FaceOnly face.shape)
+                ([face], [eye1]) ->
+                  Just (FaceAndOneEye face.shape (relativize face.shape eye1.shape))
+                ([face], [eye1, eye2]) ->
+                  Just (FaceAndTwoEyes face.shape (relativize face.shape eye1.shape) (relativize face.shape eye2.shape))
+                _ ->
+                  Nothing
+            , unsaved = True
+            }
+          )
+          model.workingAnnotation
+        , message = Nothing
+        }
+      , Cmd.none
+      )
+
+    NewAnnotationSuggestion (Err err) ->
+      ( case err of
+        (Http.BadStatus ({status})) as err ->
+          if status.code == 404 then { model | message = Nothing } -- No suggestions
+          else { model | message = Just (Err (toString err)) }
+
+        _ -> { model | message = Just (Err (toString err)) }
       , Cmd.none
       )
 
@@ -335,7 +373,7 @@ update msg model =
                 in
                   { annotation
                   | shapes = Just (updateShapes { baseRect | size = Dimension sizePx sizePx } shapes)
-                  , modified = True
+                  , unsaved = True
                   }
 
               _ -> annotation
@@ -422,7 +460,7 @@ update msg model =
                       { baseRect | location = Point xPixel yPixel }
                       shapes
                     )
-                  , modified = True
+                  , unsaved = True
                   }
 
               _ -> annotation
@@ -496,7 +534,7 @@ update msg model =
       ( { model
         | workingAnnotation =
           Maybe.map
-          ( \annotation -> { annotation | modified = False } )
+          ( \annotation -> { annotation | unsaved = False } )
           model.workingAnnotation
         , message = Just ( Ok "Annotation saved" )
         }

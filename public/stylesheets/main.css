@@ -42,6 +42,9 @@ div.content-placeholder {
   position: absolute;
   border: solid green 2px;
 }
+.unsaved {
+  border-style: dotted;
+}
 .move {
   color: green;
   padding-left: 0.3em;
