@@ -57,14 +57,23 @@ class Application @Inject()(
     ) match {
       case None => NotFound
 
-      case Some(files: Array[File]) => Ok(
+      case Some(files: Array[File]) => Ok {
         Json.toJson(
           FileItems(
             path = Paths.get(path).normalize.iterator.asScala.map(_.getFileName.toString).filter(_.nonEmpty).toSeq,
-            fileItems = files.toSeq.map(FileItem.apply)
+            fileItems = files.toSeq.map { file: File =>
+              FileItem(
+                file.getName, file.isDirectory,
+                if (file.isDirectory) None
+                else
+                  imageService.
+                    getAnnotations(s"${path}${file.getName}").
+                    map(_.annotations.size)
+              )
+            }
           )
         )
-      )
+      }
     }
   }
 

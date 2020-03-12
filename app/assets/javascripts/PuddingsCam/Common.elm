@@ -18,6 +18,7 @@ type alias CsrfToken =
 type alias FileItem =
   { name : String
   , dir : Bool
+  , numAnnotations : Maybe Int
   }
 type alias FileItems =
   { path : List String

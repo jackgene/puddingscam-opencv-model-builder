@@ -7,9 +7,10 @@ import Json.Decode as Decode
 -- JSON
 fileItemDecoder : Decode.Decoder FileItem
 fileItemDecoder =
-  Decode.map2 FileItem
+  Decode.map3 FileItem
   (Decode.field "name" Decode.string)
   (Decode.field "dir" Decode.bool)
+  (Decode.maybe (Decode.field "numAnnotations" Decode.int))
 
 
 fileItemsDecoder : Decode.Decoder FileItems

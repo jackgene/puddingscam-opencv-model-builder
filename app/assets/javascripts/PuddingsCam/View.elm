@@ -246,7 +246,7 @@ view model =
               ( List.map
                 (\file ->
                   div [ class "thumbnail" ]
-                  [ a [ href ( "#annotate|" ++ pathSpec model.path ++ "/" ++ file.name ) ]
+                  ( a [ href ( "#annotate|" ++ pathSpec model.path ++ "/" ++ file.name ) ]
                     [ img
                       [ id file.name
                       , src ( "/image" ++ pathSpec model.path ++ "/" ++ file.name ++ ".jpg" )
@@ -255,7 +255,11 @@ view model =
                       ]
                       []
                     ]
-                  ]
+                  ::case file.numAnnotations of
+                    Just numAnnotations ->
+                      [ div [ class "label" ] [ text (toString numAnnotations) ] ]
+                    Nothing -> []
+                  )
                 )
                 files
               )

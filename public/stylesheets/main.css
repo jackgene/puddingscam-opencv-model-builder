@@ -31,8 +31,22 @@ div.content-placeholder {
 
 /* Listing */
 .thumbnail {
+  position: relative;
   float: left;
   width: 330px;
+}
+.label {
+  position: absolute;
+  bottom: 0.25em;
+  right: 0.4em;
+  width: 1em;
+  border: solid #008000 2px;
+  color: #008000;
+  background-color: #ffffff;
+  opacity: 0.5;
+  font-size: 0.9em;
+  font-weight: bold;
+  text-align: center;
 }
 
 /* Annotation */
@@ -40,13 +54,13 @@ div.content-placeholder {
 }
 .shape {
   position: absolute;
-  border: solid green 2px;
+  border: solid #008000 2px;
 }
 .unsaved {
   border-style: dotted;
 }
 .move {
-  color: green;
+  color: #008000;
   padding-left: 0.3em;
 }
 .resize {

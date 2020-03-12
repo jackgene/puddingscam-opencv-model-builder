@@ -13731,9 +13731,9 @@ var _user$project$PuddingsCam_Common$CsrfToken = F2(
 	function (a, b) {
 		return {tokenName: a, tokenValue: b};
 	});
-var _user$project$PuddingsCam_Common$FileItem = F2(
-	function (a, b) {
-		return {name: a, dir: b};
+var _user$project$PuddingsCam_Common$FileItem = F3(
+	function (a, b, c) {
+		return {name: a, dir: b, numAnnotations: c};
 	});
 var _user$project$PuddingsCam_Common$FileItems = F2(
 	function (a, b) {
@@ -13874,11 +13874,13 @@ var _user$project$PuddingsCam_Json$annotationsDecoder = A2(
 		_elm_lang$core$Json_Decode$field,
 		'annotations',
 		_elm_lang$core$Json_Decode$list(_user$project$PuddingsCam_Json$annotationDecoder)));
-var _user$project$PuddingsCam_Json$fileItemDecoder = A3(
-	_elm_lang$core$Json_Decode$map2,
+var _user$project$PuddingsCam_Json$fileItemDecoder = A4(
+	_elm_lang$core$Json_Decode$map3,
 	_user$project$PuddingsCam_Common$FileItem,
 	A2(_elm_lang$core$Json_Decode$field, 'name', _elm_lang$core$Json_Decode$string),
-	A2(_elm_lang$core$Json_Decode$field, 'dir', _elm_lang$core$Json_Decode$bool));
+	A2(_elm_lang$core$Json_Decode$field, 'dir', _elm_lang$core$Json_Decode$bool),
+	_elm_lang$core$Json_Decode$maybe(
+		A2(_elm_lang$core$Json_Decode$field, 'numAnnotations', _elm_lang$core$Json_Decode$int)));
 var _user$project$PuddingsCam_Json$fileItemsDecoder = A3(
 	_elm_lang$core$Json_Decode$map2,
 	_user$project$PuddingsCam_Common$FileItems,
@@ -15912,7 +15914,30 @@ var _user$project$PuddingsCam_View$view = function (model) {
 																						{ctor: '[]'}),
 																					_1: {ctor: '[]'}
 																				}),
-																			_1: {ctor: '[]'}
+																			_1: function () {
+																				var _p30 = file.numAnnotations;
+																				if (_p30.ctor === 'Just') {
+																					return {
+																						ctor: '::',
+																						_0: A2(
+																							_elm_lang$html$Html$div,
+																							{
+																								ctor: '::',
+																								_0: _elm_lang$html$Html_Attributes$class('label'),
+																								_1: {ctor: '[]'}
+																							},
+																							{
+																								ctor: '::',
+																								_0: _elm_lang$html$Html$text(
+																									_elm_lang$core$Basics$toString(_p30._0)),
+																								_1: {ctor: '[]'}
+																							}),
+																						_1: {ctor: '[]'}
+																					};
+																				} else {
+																					return {ctor: '[]'};
+																				}
+																			}()
 																		});
 																},
 																files)),
@@ -15955,7 +15980,7 @@ var _user$project$Main$main = A2(
 var Elm = {};
 Elm['Main'] = Elm['Main'] || {};
 if (typeof _user$project$Main$main !== 'undefined') {
-    _user$project$Main$main(Elm['Main'], 'Main', {"types":{"unions":{"Dict.LeafColor":{"args":[],"tags":{"LBBlack":[],"LBlack":[]}},"PuddingsCam.Common.Msg":{"args":[],"tags":{"DragToResizeBoxStart":["PuddingsCam.Common.ShapeId","PuddingsCam.Common.MousePos"],"NewFileItems":["Result.Result Http.Error PuddingsCam.Common.FileItems"],"DragStop":[],"DragToMoveBoxMove":["PuddingsCam.Common.MousePos"],"NewMetadata":["Result.Result Http.Error PuddingsCam.Common.Metadata"],"NewAnnotationSuggestion":["Result.Result Http.Error PuddingsCam.Common.Annotations"],"DragToMoveBoxStart":["PuddingsCam.Common.ShapeId","PuddingsCam.Common.MousePos"],"DragToCreateBoxStart":["Mouse.Event"],"SubmitAnnotationRequest":[],"DragToResizeBoxMove":["PuddingsCam.Common.MousePos"],"SubmitAnnotationResponse":["Result.Result Http.Error PuddingsCam.Common.Annotations"],"NewAnnotation":["Result.Result Http.Error PuddingsCam.Common.Annotations"],"NewLocation":["Navigation.Location"]}},"Dict.Dict":{"args":["k","v"],"tags":{"RBNode_elm_builtin":["Dict.NColor","k","v","Dict.Dict k v","Dict.Dict k v"],"RBEmpty_elm_builtin":["Dict.LeafColor"]}},"Dict.NColor":{"args":[],"tags":{"BBlack":[],"Red":[],"NBlack":[],"Black":[]}},"Http.Error":{"args":[],"tags":{"BadUrl":["String"],"NetworkError":[],"Timeout":[],"BadStatus":["Http.Response String"],"BadPayload":["String","Http.Response String"]}},"Result.Result":{"args":["error","value"],"tags":{"Ok":["value"],"Err":["error"]}},"PuddingsCam.Common.ShapeId":{"args":[],"tags":{"Eye2":[],"Eye1":[],"Face":[]}},"Mouse.Button":{"args":[],"tags":{"BackButton":[],"MiddleButton":[],"ErrorButton":[],"SecondButton":[],"MainButton":[],"ForwardButton":[]}}},"aliases":{"PuddingsCam.Common.Dimension":{"args":[],"type":"{ widthPixel : Int, heightPixel : Int }"},"Http.Response":{"args":["body"],"type":"{ url : String , status : { code : Int, message : String } , headers : Dict.Dict String String , body : body }"},"PuddingsCam.Common.Annotations":{"args":[],"type":"{ annotations : List PuddingsCam.Common.Annotation }"},"PuddingsCam.Common.Annotation":{"args":[],"type":"{ label : String, shape : PuddingsCam.Common.Rectangle }"},"PuddingsCam.Common.MousePos":{"args":[],"type":"( Float, Float )"},"PuddingsCam.Common.FileItems":{"args":[],"type":"{ path : List String, fileItems : List PuddingsCam.Common.FileItem }"},"PuddingsCam.Common.FileItem":{"args":[],"type":"{ name : String, dir : Bool }"},"PuddingsCam.Common.Rectangle":{"args":[],"type":"{ location : PuddingsCam.Common.Point , size : PuddingsCam.Common.Dimension }"},"PuddingsCam.Common.Point":{"args":[],"type":"{ xPixel : Int, yPixel : Int }"},"Mouse.Event":{"args":[],"type":"{ keys : Mouse.Keys , button : Mouse.Button , clientPos : ( Float, Float ) , offsetPos : ( Float, Float ) , pagePos : ( Float, Float ) , screenPos : ( Float, Float ) }"},"Mouse.Keys":{"args":[],"type":"{ alt : Bool, ctrl : Bool, shift : Bool }"},"Navigation.Location":{"args":[],"type":"{ href : String , host : String , hostname : String , protocol : String , origin : String , port_ : String , pathname : String , search : String , hash : String , username : String , password : String }"},"PuddingsCam.Common.Metadata":{"args":[],"type":"{ size : PuddingsCam.Common.Dimension }"}},"message":"PuddingsCam.Common.Msg"},"versions":{"elm":"0.18.0"}});
+    _user$project$Main$main(Elm['Main'], 'Main', {"types":{"unions":{"Dict.LeafColor":{"args":[],"tags":{"LBBlack":[],"LBlack":[]}},"PuddingsCam.Common.Msg":{"args":[],"tags":{"DragToResizeBoxStart":["PuddingsCam.Common.ShapeId","PuddingsCam.Common.MousePos"],"NewFileItems":["Result.Result Http.Error PuddingsCam.Common.FileItems"],"DragStop":[],"DragToMoveBoxMove":["PuddingsCam.Common.MousePos"],"NewMetadata":["Result.Result Http.Error PuddingsCam.Common.Metadata"],"NewAnnotationSuggestion":["Result.Result Http.Error PuddingsCam.Common.Annotations"],"DragToMoveBoxStart":["PuddingsCam.Common.ShapeId","PuddingsCam.Common.MousePos"],"DragToCreateBoxStart":["Mouse.Event"],"SubmitAnnotationRequest":[],"DragToResizeBoxMove":["PuddingsCam.Common.MousePos"],"SubmitAnnotationResponse":["Result.Result Http.Error PuddingsCam.Common.Annotations"],"NewAnnotation":["Result.Result Http.Error PuddingsCam.Common.Annotations"],"NewLocation":["Navigation.Location"]}},"Dict.Dict":{"args":["k","v"],"tags":{"RBNode_elm_builtin":["Dict.NColor","k","v","Dict.Dict k v","Dict.Dict k v"],"RBEmpty_elm_builtin":["Dict.LeafColor"]}},"Maybe.Maybe":{"args":["a"],"tags":{"Just":["a"],"Nothing":[]}},"Dict.NColor":{"args":[],"tags":{"BBlack":[],"Red":[],"NBlack":[],"Black":[]}},"Http.Error":{"args":[],"tags":{"BadUrl":["String"],"NetworkError":[],"Timeout":[],"BadStatus":["Http.Response String"],"BadPayload":["String","Http.Response String"]}},"Result.Result":{"args":["error","value"],"tags":{"Ok":["value"],"Err":["error"]}},"PuddingsCam.Common.ShapeId":{"args":[],"tags":{"Eye2":[],"Eye1":[],"Face":[]}},"Mouse.Button":{"args":[],"tags":{"BackButton":[],"MiddleButton":[],"ErrorButton":[],"SecondButton":[],"MainButton":[],"ForwardButton":[]}}},"aliases":{"PuddingsCam.Common.Dimension":{"args":[],"type":"{ widthPixel : Int, heightPixel : Int }"},"Http.Response":{"args":["body"],"type":"{ url : String , status : { code : Int, message : String } , headers : Dict.Dict String String , body : body }"},"PuddingsCam.Common.Annotations":{"args":[],"type":"{ annotations : List PuddingsCam.Common.Annotation }"},"PuddingsCam.Common.Annotation":{"args":[],"type":"{ label : String, shape : PuddingsCam.Common.Rectangle }"},"PuddingsCam.Common.MousePos":{"args":[],"type":"( Float, Float )"},"PuddingsCam.Common.FileItems":{"args":[],"type":"{ path : List String, fileItems : List PuddingsCam.Common.FileItem }"},"PuddingsCam.Common.FileItem":{"args":[],"type":"{ name : String, dir : Bool, numAnnotations : Maybe.Maybe Int }"},"PuddingsCam.Common.Rectangle":{"args":[],"type":"{ location : PuddingsCam.Common.Point , size : PuddingsCam.Common.Dimension }"},"PuddingsCam.Common.Point":{"args":[],"type":"{ xPixel : Int, yPixel : Int }"},"Mouse.Event":{"args":[],"type":"{ keys : Mouse.Keys , button : Mouse.Button , clientPos : ( Float, Float ) , offsetPos : ( Float, Float ) , pagePos : ( Float, Float ) , screenPos : ( Float, Float ) }"},"Mouse.Keys":{"args":[],"type":"{ alt : Bool, ctrl : Bool, shift : Bool }"},"Navigation.Location":{"args":[],"type":"{ href : String , host : String , hostname : String , protocol : String , origin : String , port_ : String , pathname : String , search : String , hash : String , username : String , password : String }"},"PuddingsCam.Common.Metadata":{"args":[],"type":"{ size : PuddingsCam.Common.Dimension }"}},"message":"PuddingsCam.Common.Msg"},"versions":{"elm":"0.18.0"}});
 }
 Elm['PuddingsCam'] = Elm['PuddingsCam'] || {};
 Elm['PuddingsCam']['Common'] = Elm['PuddingsCam']['Common'] || {};
