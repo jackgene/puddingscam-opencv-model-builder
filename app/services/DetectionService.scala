@@ -12,7 +12,7 @@ import javax.inject.{Inject, Singleton}
 import model.{Annotation, Annotations}
 import org.bytedeco.javacv.OpenCVFrameConverter.ToMat
 import org.bytedeco.javacv.{FrameConverter, Java2DFrameConverter}
-import org.bytedeco.opencv.opencv_core.{Mat, Rect, RectVector}
+import org.bytedeco.opencv.opencv_core.{Mat, Rect, RectVector, Size}
 import org.bytedeco.opencv.opencv_objdetect.CascadeClassifier
 import play.api.Configuration
 import play.api.Logging
@@ -249,9 +249,13 @@ class DetectionService @Inject()(cfg: Configuration, imageService: ImageService)
 
   private implicit val RectOrdering: Ordering[Rect] =
     Ordering.by{ rect: Rect => rect.width * rect.height }
-  private def openCvDetectMultiscale(classifier: CascadeClassifier, mat: Mat): Seq[Rect] = {
+  private def openCvDetectMultiscale(
+      classifier: CascadeClassifier, mat: Mat, minSize: Int, maxSize: Int): Seq[Rect] = {
     val rects: RectVector = new RectVector()
-    classifier.detectMultiScale(mat, rects)
+    classifier.detectMultiScale(
+      mat, rects, 1.1, 3, 0,
+      new Size(minSize, minSize), new Size(maxSize, maxSize)
+    )
 
     (0L until rects.size).map(rects.get)
   }
@@ -261,8 +265,9 @@ class DetectionService @Inject()(cfg: Configuration, imageService: ImageService)
       faceClassifier: CascadeClassifier <- faceClassifierOpt
       img: BufferedImage <- imageService.getImage(path)
       mat: Mat = frameToMat.convert(bufferedImageToFrame.convert(img))
+      minSize: Int = math.min(mat.rows, mat.cols) / 20
       faces: Seq[Rect] <-
-        openCvDetectMultiscale(faceClassifier, mat) match {
+        openCvDetectMultiscale(faceClassifier, mat, minSize, mat.rows) match {
           case empty: Seq[Rect] if empty.isEmpty => None
           case nonEmpty: Seq[Rect] => Some(nonEmpty)
         }
@@ -271,7 +276,9 @@ class DetectionService @Inject()(cfg: Configuration, imageService: ImageService)
       val eyes: List[Annotation] =
         for {
           eyeClassifier: CascadeClassifier <- eyeClassifierOpt.toList
-          rect: Rect <- openCvDetectMultiscale(eyeClassifier, mat.apply(largestFace)).
+          faceMat: Mat = mat.apply(largestFace)
+          rect: Rect <-
+            openCvDetectMultiscale(eyeClassifier, faceMat, 0, faceMat.rows / 4).
             sorted.takeRight(2)
         } yield Annotation(
           label = "eye",
