@@ -281,7 +281,7 @@ class DetectionService @Inject()(cfg: Configuration, imageService: ImageService)
           )
           eyeAreaMat: Mat = mat(eyeArea)
           rect: Rect <-
-            openCvDetectMultiscale(eyeClassifier, eyeAreaMat, 0, face.height / 4).
+            openCvDetectMultiscale(eyeClassifier, eyeAreaMat, face.height / 10, face.height / 4).
             sorted.takeRight(2)
         } yield Annotation(
           label = "eye",
