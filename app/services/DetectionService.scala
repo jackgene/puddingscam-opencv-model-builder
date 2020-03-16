@@ -271,19 +271,22 @@ class DetectionService @Inject()(cfg: Configuration, imageService: ImageService)
           case empty: Seq[Rect] if empty.isEmpty => None
           case nonEmpty: Seq[Rect] => Some(nonEmpty)
         }
-      largestFace: Rect = faces.max
     } yield {
+      val face: Rect = faces.max
       val eyes: List[Annotation] =
         for {
           eyeClassifier: CascadeClassifier <- eyeClassifierOpt.toList
-          faceMat: Mat = mat.apply(largestFace)
+          eyeArea: Rect = new Rect(
+            face.x, face.y + (face.height / 4), face.width, face.height * 7 / 15
+          )
+          eyeAreaMat: Mat = mat(eyeArea)
           rect: Rect <-
-            openCvDetectMultiscale(eyeClassifier, faceMat, 0, faceMat.rows / 4).
+            openCvDetectMultiscale(eyeClassifier, eyeAreaMat, 0, face.height / 4).
             sorted.takeRight(2)
         } yield Annotation(
           label = "eye",
           shape = new Rectangle(
-            largestFace.x + rect.x, largestFace.y + rect.y, rect.width, rect.height
+            eyeArea.x + rect.x, eyeArea.y + rect.y, rect.width, rect.height
           )
         )
 
@@ -292,7 +295,7 @@ class DetectionService @Inject()(cfg: Configuration, imageService: ImageService)
           Annotation(
             label = "face",
             shape = new Rectangle(
-              largestFace.x, largestFace.y, largestFace.width, largestFace.height
+              face.x, face.y, face.width, face.height
             )
           ) :: eyes
       )
