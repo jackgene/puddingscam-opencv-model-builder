@@ -15,6 +15,8 @@ libraryDependencies += guice
 libraryDependencies += "org.bytedeco" % "javacv-platform" % "1.5.2"
 libraryDependencies += "org.libraw" % "jlibraw" % "0.1-SNAPSHOT"
 
+libraryDependencies += "com.sun.activation" % "javax.activation" % "1.2.0" % Runtime
+
 javaOptions in Universal ++= Seq(
   // -J params will be added as jvm parameters
   "-J-Djava.library.path=conf/native/"
