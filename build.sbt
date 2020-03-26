@@ -22,7 +22,7 @@ javaOptions in Universal ++= Seq(
   "-J-Djava.library.path=conf/native/"
 )
 
-val elmMake = taskKey[Seq[File]]("elm-make")
+lazy val elmMake = taskKey[Seq[File]]("elm-make")
 
 elmMake := {
   import scala.sys.process._
