@@ -209,6 +209,7 @@ class DetectionService @Inject()(cfg: Configuration, imageService: ImageService)
             "-bg bg.txt " +
             s"-numPos ${numPosTrain} -numNeg ${numNeg} -numStages ${numStages} " +
             s"-w ${objectSizePx} -h ${objectSizePx} -minHitRate ${minHitRate} " +
+            "-baseFormatSave " + // Save in old format as required by CUDA classifier
             OpenCvTrainCascadeOpts
         runWithLogging(trainCmd, labelTrainingDir, trainLogFile)
       }.
