@@ -5,15 +5,40 @@ import java.awt.image.BufferedImage
 import java.io.{BufferedWriter, File, FileInputStream, FileWriter}
 
 import javax.imageio.ImageIO
+import javax.imageio.spi.{IIORegistry, ImageReaderSpi}
 import javax.inject.{Inject, Singleton}
 import model.{Annotations, Metadata}
-import play.api.Configuration
+import org.libraw.javax.imageio.spi.LibRawImageReaderSpi
+import play.api.{Configuration, Logging}
 import play.api.libs.json.Json
 
 import scala.io.Source
+import scala.jdk.CollectionConverters._
 
 @Singleton
-class ImageService @Inject()(cfg: Configuration) {
+class ImageService @Inject()(cfg: Configuration) extends Logging {
+  {
+    val iioReg: IIORegistry = IIORegistry.getDefaultInstance
+
+    for {
+      tiffReaderSpi: ImageReaderSpi <- Option(
+        iioReg.getServiceProviderByClass(
+          Class.
+            forName("com.sun.imageio.plugins.tiff.TIFFImageReaderSpi").
+            asSubclass(classOf[ImageReaderSpi])
+        )
+      )
+      libRawReaderSpi: ImageReaderSpi <- Option(
+        iioReg.getServiceProviderByClass(classOf[LibRawImageReaderSpi])
+      )
+    } iioReg.setOrdering(classOf[ImageReaderSpi], libRawReaderSpi, tiffReaderSpi)
+    logger.debug("ImageReaderSpi by priority:")
+    for {
+      spi: ImageReaderSpi <- iioReg.
+        getServiceProviders(classOf[ImageReaderSpi], true).asScala
+    } logger.debug(spi.getClass.getCanonicalName)
+  }
+
   private val workingDir: File =
     new File(cfg.get[String]("puddings-cam.working-dir.path")) match {
       case existingDir: File if existingDir.exists =>
