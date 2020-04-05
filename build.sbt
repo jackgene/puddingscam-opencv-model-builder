@@ -12,7 +12,10 @@ resolvers += Resolver.mavenLocal
 dependencyOverrides += "com.google.guava" % "guava" % "28.1-jre"
 
 libraryDependencies += guice
-libraryDependencies += "org.bytedeco" % "javacv-platform" % "1.5.2"
+libraryDependencies += "org.bytedeco" % "javacv-platform" % "1.4.3"
+libraryDependencies += "org.bytedeco.javacpp-presets" % "opencv-platform" % "3.4.3-1.4.3"
+libraryDependencies += "org.bytedeco.javacpp-presets" % "opencv" % "3.4.3-1.4.3" classifier "macosx-x86_64-gpu"
+libraryDependencies += "org.bytedeco.javacpp-presets" % "cuda" % "10.0-7.3-1.4.3" classifier "macosx-x86_64-redist"
 libraryDependencies += "org.libraw" % "jlibraw" % "0.1-SNAPSHOT"
 
 libraryDependencies += "com.sun.activation" % "javax.activation" % "1.2.0" % Runtime

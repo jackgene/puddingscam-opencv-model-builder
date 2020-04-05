@@ -2,7 +2,7 @@ package services
 
 import java.awt.Rectangle
 import java.awt.image.BufferedImage
-import java.io.{File, FileWriter, PrintWriter}
+import java.io.{File, FileNotFoundException, FileWriter, PrintWriter}
 import java.nio.file.{Files, Path}
 import java.time.LocalDateTime
 import java.util.Comparator
@@ -10,19 +10,80 @@ import java.util.Comparator
 import javax.imageio.ImageIO
 import javax.inject.{Inject, Singleton}
 import model.{Annotation, Annotations}
+import org.bytedeco.javacpp.opencv_core.{GpuMat, Mat, Rect, RectVector, Size}
+import org.bytedeco.javacpp.opencv_cudaobjdetect.CudaCascadeClassifier
+import org.bytedeco.javacpp.opencv_objdetect.CascadeClassifier
+import org.bytedeco.javacpp.opencv_imgcodecs.{imread, IMREAD_GRAYSCALE}
+import org.bytedeco.javacpp.opencv_imgproc.{cvtColor, COLOR_BGR2GRAY}
 import org.bytedeco.javacv.OpenCVFrameConverter.ToMat
 import org.bytedeco.javacv.{FrameConverter, Java2DFrameConverter}
-import org.bytedeco.opencv.opencv_core.{Mat, Rect, RectVector, Size}
-import org.bytedeco.opencv.opencv_objdetect.CascadeClassifier
-import play.api.Configuration
-import play.api.Logging
+import play.api.{Configuration, Logging}
 
 import scala.collection.immutable.ArraySeq
 import scala.jdk.CollectionConverters._
 import scala.sys.process._
+import scala.util.control.NonFatal
+import scala.util.{Failure, Try}
 
+object DetectionService {
+  object OpenCvClassifier {
+    def create(parameters: File, scaleFactor: Double, minNeighbors: Int): Try[OpenCvClassifier] =
+      if (parameters.exists && parameters.isFile)
+        Try {
+          new CudaOpenCvCascadeClassifier(parameters, scaleFactor, minNeighbors)
+        }.recoverWith {
+          case NonFatal(_) =>
+            Try(new CpuOpenCvCascadeClassifier(parameters, scaleFactor, minNeighbors))
+        }
+      else
+        Failure(new FileNotFoundException())
+  }
+  trait OpenCvClassifier {
+    def detect(image: Mat, minSize: Size, maxSize: Size): RectVector
+  }
+  class CpuOpenCvCascadeClassifier(parameters: File, scaleFactor: Double, minNeighbors: Int)
+    extends OpenCvClassifier with Logging {
+    val classifier: CascadeClassifier = new CascadeClassifier(parameters.getCanonicalPath)
+    logger.info(s"Loaded classifier from ${parameters}...")
+
+    override def detect(image: Mat, minSize: Size, maxSize: Size): RectVector = {
+      val objs = new RectVector
+      classifier.detectMultiScale(image, objs, scaleFactor, minNeighbors, 0, minSize, maxSize)
+
+      objs
+    }
+  }
+  class CudaOpenCvCascadeClassifier(parameters: File, scaleFactor: Double, minNeighbors: Int)
+      extends OpenCvClassifier with Logging {
+    val classifier: CudaCascadeClassifier =
+      CudaCascadeClassifier.create(parameters.getCanonicalPath)
+    classifier.setScaleFactor(scaleFactor)
+    classifier.setMinNeighbors(minNeighbors)
+    val DefaultObjectSize = new Size(0, 0)
+    logger.info(s"Loaded classifier from ${parameters}...")
+
+    override def detect(image: Mat, minSize: Size, maxSize: Size): RectVector = {
+      val objsMat: GpuMat = new GpuMat
+      val objs = new RectVector
+      classifier.synchronized {
+        classifier.setMinObjectSize(minSize)
+        classifier.setMaxObjectSize(maxSize)
+
+        classifier.detectMultiScale(new GpuMat(image), objsMat)
+        classifier.convert(objsMat, objs)
+
+        classifier.setMinObjectSize(DefaultObjectSize)
+        classifier.setMaxObjectSize(DefaultObjectSize)
+      }
+
+      objs
+    }
+  }
+}
 @Singleton
 class DetectionService @Inject()(cfg: Configuration, imageService: ImageService) extends Logging {
+  import DetectionService._
+
   private val workingDir: File =
     new File(cfg.get[String]("puddings-cam.working-dir.path")) match {
       case existingDir: File if existingDir.exists =>
@@ -42,6 +103,14 @@ class DetectionService @Inject()(cfg: Configuration, imageService: ImageService)
     }
   private val annotationsDir: File =
     new File(workingDir, "annotations") match {
+      case existingDir: File if existingDir.exists =>
+        existingDir
+      case newDir: File =>
+        newDir.mkdirs()
+        newDir
+    }
+  private val jpegCacheDir: File =
+    new File(workingDir, "cache/jpeg") match {
       case existingDir: File if existingDir.exists =>
         existingDir
       case newDir: File =>
@@ -220,20 +289,16 @@ class DetectionService @Inject()(cfg: Configuration, imageService: ImageService)
 
   private val bufferedImageToFrame: FrameConverter[BufferedImage] = new Java2DFrameConverter()
   private val frameToMat: ToMat = new ToMat()
-  private val faceClassifierOpt: Option[CascadeClassifier] =
-    Option(
-      new CascadeClassifier(
-        s"${workingDir}/suggestion/cascade/face/cascade.xml"
-      )
-    ).
-    filterNot(_.empty)
-  private val eyeClassifierOpt: Option[CascadeClassifier] =
-    Option(
-      new CascadeClassifier(
-        s"${workingDir}/suggestion/cascade/eye/cascade.xml"
-      )
-    ).
-    filterNot(_.empty)
+  private val faceClassifierOpt: Option[OpenCvClassifier] =
+    OpenCvClassifier.create(
+      new File(s"${workingDir}/suggestion/cascade/face/cascade.xml"),
+      1.1, 3
+    ).toOption
+  private val eyeClassifierOpt: Option[OpenCvClassifier] =
+    OpenCvClassifier.create(
+      new File(s"${workingDir}/suggestion/cascade/eye/cascade.xml"),
+      1.1, 3
+    ).toOption
   faceClassifierOpt match {
     case None =>
       logger.warn("face cascade classifier not loaded, annotations suggestions will not be available")
@@ -251,11 +316,9 @@ class DetectionService @Inject()(cfg: Configuration, imageService: ImageService)
   private implicit val RectOrdering: Ordering[Rect] =
     Ordering.by{ rect: Rect => rect.width * rect.height }
   private def openCvDetectMultiscale(
-      classifier: CascadeClassifier, mat: Mat, minSize: Int, maxSize: Int): Seq[Rect] = {
-    val rects: RectVector = new RectVector()
-    classifier.detectMultiScale(
-      mat, rects, 1.1, 3, 0,
-      new Size(minSize, minSize), new Size(maxSize, maxSize)
+      classifier: OpenCvClassifier, mat: Mat, minSize: Int, maxSize: Int): Seq[Rect] = {
+    val rects: RectVector = classifier.detect(
+      mat, new Size(minSize, minSize), new Size(maxSize, maxSize)
     )
 
     (0L until rects.size).map(rects.get)
@@ -263,9 +326,8 @@ class DetectionService @Inject()(cfg: Configuration, imageService: ImageService)
 
   def detect(path: String): Option[Annotations] = {
     for {
-      faceClassifier: CascadeClassifier <- faceClassifierOpt
-      img: BufferedImage <- imageService.getImage(path)
-      mat: Mat = frameToMat.convert(bufferedImageToFrame.convert(img))
+      faceClassifier: OpenCvClassifier <- faceClassifierOpt
+      mat: Mat = imread(new File(jpegCacheDir, s"${path}.jpg").getCanonicalPath, IMREAD_GRAYSCALE)
       minSize: Int = math.min(mat.rows, mat.cols) / 20
       faces: Seq[Rect] <-
         openCvDetectMultiscale(faceClassifier, mat, minSize, mat.rows) match {
@@ -276,7 +338,7 @@ class DetectionService @Inject()(cfg: Configuration, imageService: ImageService)
       val face: Rect = faces.max
       val eyes: List[Annotation] =
         for {
-          eyeClassifier: CascadeClassifier <- eyeClassifierOpt.toList
+          eyeClassifier: OpenCvClassifier <- eyeClassifierOpt.toList
           eyeArea: Rect = new Rect(
             face.x, face.y + (face.height / 4), face.width, face.height * 7 / 15
           )
