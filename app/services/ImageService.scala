@@ -16,7 +16,9 @@ import scala.io.Source
 import scala.jdk.CollectionConverters._
 
 @Singleton
-class ImageService @Inject()(cfg: Configuration) extends Logging {
+class ImageService @Inject()(cfg: Configuration, workingDirs: WorkingDirectoryService) extends Logging {
+  import workingDirs._
+
   {
     val iioReg: IIORegistry = IIORegistry.getDefaultInstance
 
@@ -39,38 +41,6 @@ class ImageService @Inject()(cfg: Configuration) extends Logging {
     } logger.debug(spi.getClass.getCanonicalName)
   }
 
-  private val workingDir: File =
-    new File(cfg.get[String]("puddings-cam.working-dir.path")) match {
-      case existingDir: File if existingDir.exists =>
-        existingDir
-      case newDir: File =>
-        newDir.mkdirs()
-        newDir
-    }
-  private val jpegCacheDir: File =
-    new File(workingDir, "cache/jpeg") match {
-      case existingDir: File if existingDir.exists =>
-        existingDir
-      case newDir: File =>
-        newDir.mkdirs()
-        newDir
-    }
-  private val metadataCacheDir: File =
-    new File(workingDir, "cache/metadata") match {
-      case existingDir: File if existingDir.exists =>
-        existingDir
-      case newDir: File =>
-        newDir.mkdirs()
-        newDir
-    }
-  private val annotationsDir: File =
-    new File(workingDir, "annotations") match {
-      case existingDir: File if existingDir.exists =>
-        existingDir
-      case newDir: File =>
-        newDir.mkdirs()
-        newDir
-    }
   private val basePhotosDir: File = new File(cfg.get[String]("puddings-cam.base-photo-dir.path"))
 
   private def loadCachedImage(path: String): Unit = {

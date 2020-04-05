@@ -10,11 +10,10 @@ import java.util.Comparator
 import javax.imageio.ImageIO
 import javax.inject.{Inject, Singleton}
 import model.{Annotation, Annotations}
-import org.bytedeco.javacpp.opencv_core.{GpuMat, Mat, Rect, RectVector, Size}
+import org.bytedeco.javacpp.opencv_core._
 import org.bytedeco.javacpp.opencv_cudaobjdetect.CudaCascadeClassifier
+import org.bytedeco.javacpp.opencv_imgcodecs.{IMREAD_GRAYSCALE, imread}
 import org.bytedeco.javacpp.opencv_objdetect.CascadeClassifier
-import org.bytedeco.javacpp.opencv_imgcodecs.{imread, IMREAD_GRAYSCALE}
-import org.bytedeco.javacpp.opencv_imgproc.{cvtColor, COLOR_BGR2GRAY}
 import org.bytedeco.javacv.OpenCVFrameConverter.ToMat
 import org.bytedeco.javacv.{FrameConverter, Java2DFrameConverter}
 import play.api.{Configuration, Logging}
@@ -81,42 +80,12 @@ object DetectionService {
   }
 }
 @Singleton
-class DetectionService @Inject()(cfg: Configuration, imageService: ImageService) extends Logging {
+class DetectionService @Inject()(
+    cfg: Configuration, imageService: ImageService, workingDirs: WorkingDirectoryService)
+    extends Logging {
   import DetectionService._
+  import workingDirs._
 
-  private val workingDir: File =
-    new File(cfg.get[String]("puddings-cam.working-dir.path")) match {
-      case existingDir: File if existingDir.exists =>
-        existingDir
-      case newDir: File =>
-        newDir.mkdirs()
-        newDir
-    }
-  private val trainingDir: File =
-    new File(workingDir, "training/cascade") match {
-      case existingDir: File if existingDir.exists =>
-        existingDir
-      case newDir: File =>
-        new File(newDir, "bg").mkdirs()
-        new File(newDir, "fg").mkdirs()
-        newDir
-    }
-  private val annotationsDir: File =
-    new File(workingDir, "annotations") match {
-      case existingDir: File if existingDir.exists =>
-        existingDir
-      case newDir: File =>
-        newDir.mkdirs()
-        newDir
-    }
-  private val jpegCacheDir: File =
-    new File(workingDir, "cache/jpeg") match {
-      case existingDir: File if existingDir.exists =>
-        existingDir
-      case newDir: File =>
-        newDir.mkdirs()
-        newDir
-    }
   private val AnnotationsDirPathChars: Int = annotationsDir.getAbsolutePath.length
   private val OpenCvTrainCascadeOpts: String =
     cfg.getOptional[String]("puddings-cam.opencv-traincascade.options").
