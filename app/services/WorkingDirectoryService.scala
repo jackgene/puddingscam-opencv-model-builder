@@ -24,9 +24,9 @@ class WorkingDirectoryService @Inject()(cfg: Configuration) {
   val metadataCacheDir: File = createIfNotExist(
     new File(workingDir, "cache/metadata")
   )
-  val trainingDir: File = new File(workingDir, "training/cascade")
-  createIfNotExist(new File(trainingDir, "bg"))
-  createIfNotExist(new File(trainingDir, "fg"))
+  val trainingDir: File = createIfNotExist(
+    new File(workingDir, "training/cascade")
+  )
   val annotationsDir: File = createIfNotExist(
     new File(workingDir, "annotations")
   )
