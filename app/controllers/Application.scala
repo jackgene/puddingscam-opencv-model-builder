@@ -106,7 +106,7 @@ class Application @Inject()(
 
   def showAnnotation(urlEncodedPath: String, suggested: Boolean): Action[AnyContent] = Action {
     val path: String = UriEncoding.decodePath(urlEncodedPath, StandardCharsets.UTF_8)
-    (if (suggested) detectionService.detect(path) else imageService.getAnnotations(path)) match {
+    (if (suggested) detectionService.classify(path) else imageService.getAnnotations(path)) match {
       case Some(annotations: Annotations) =>
         Ok(Json.toJson(annotations))
 

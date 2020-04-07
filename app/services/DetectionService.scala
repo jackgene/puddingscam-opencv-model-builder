@@ -2,7 +2,7 @@ package services
 
 import java.awt.Rectangle
 import java.awt.image.BufferedImage
-import java.io.{File, FileNotFoundException, FileWriter, PrintWriter}
+import java.io.{File, FileWriter, PrintWriter}
 import java.nio.file.{Files, Path}
 import java.time.LocalDateTime
 import java.util.Comparator
@@ -14,28 +14,23 @@ import org.bytedeco.javacpp.opencv_core._
 import org.bytedeco.javacpp.opencv_cudaobjdetect.CudaCascadeClassifier
 import org.bytedeco.javacpp.opencv_imgcodecs.{IMREAD_GRAYSCALE, imread}
 import org.bytedeco.javacpp.opencv_objdetect.CascadeClassifier
-import org.bytedeco.javacv.OpenCVFrameConverter.ToMat
-import org.bytedeco.javacv.{FrameConverter, Java2DFrameConverter}
 import play.api.{Configuration, Logging}
 
 import scala.collection.immutable.ArraySeq
 import scala.jdk.CollectionConverters._
 import scala.sys.process._
-import scala.util.control.NonFatal
-import scala.util.{Failure, Try}
 
 object DetectionService {
   object OpenCvClassifier {
-    def create(parameters: File, scaleFactor: Double, minNeighbors: Int): Try[OpenCvClassifier] =
+    def create(parameters: File, scaleFactor: Double, minNeighbors: Int): Option[OpenCvClassifier] =
       if (parameters.exists && parameters.isFile)
-        Try {
-          new CudaOpenCvCascadeClassifier(parameters, scaleFactor, minNeighbors)
-        }.recoverWith {
-          case NonFatal(_) =>
-            Try(new CpuOpenCvCascadeClassifier(parameters, scaleFactor, minNeighbors))
+        try {
+          Some(new CudaOpenCvCascadeClassifier(parameters, scaleFactor, minNeighbors))
+        } catch {
+          case _: NoClassDefFoundError =>
+            Some(new CpuOpenCvCascadeClassifier(parameters, scaleFactor, minNeighbors))
         }
-      else
-        Failure(new FileNotFoundException())
+      else None
   }
   trait OpenCvClassifier {
     def detect(image: Mat, minSize: Size, maxSize: Size): RectVector
@@ -86,10 +81,12 @@ class DetectionService @Inject()(
   import DetectionService._
   import workingDirs._
 
-  private val AnnotationsDirPathChars: Int = annotationsDir.getAbsolutePath.length
+  private val detectionCfg: Configuration =
+    cfg.get[Configuration]("puddings-cam.detection")
+  private val AnnotationsDirPathChars: Int =
+    annotationsDir.getAbsolutePath.length
   private val OpenCvTrainCascadeOpts: String =
-    cfg.getOptional[String]("puddings-cam.opencv-traincascade.options").
-    getOrElse("")
+    detectionCfg.get[String]("train.opencv-traincascade.options")
 
   private def getAllAnnotations(root: File): Seq[(String,Annotations)] = {
     root.listFiles match {
@@ -256,18 +253,18 @@ class DetectionService @Inject()(
     (s"echo Training complete after ${attempts} failed attempts" #>> trainLogFile).!
   }
 
-  private val bufferedImageToFrame: FrameConverter[BufferedImage] = new Java2DFrameConverter()
-  private val frameToMat: ToMat = new ToMat()
   private val faceClassifierOpt: Option[OpenCvClassifier] =
     OpenCvClassifier.create(
       new File(s"${workingDir}/suggestion/cascade/face/cascade.xml"),
-      1.1, 3
-    ).toOption
+      detectionCfg.get[Double]("classify.face.scale-factor"),
+      detectionCfg.get[Int]("classify.face.min-neighbors")
+    )
   private val eyeClassifierOpt: Option[OpenCvClassifier] =
     OpenCvClassifier.create(
       new File(s"${workingDir}/suggestion/cascade/eye/cascade.xml"),
-      1.1, 3
-    ).toOption
+      detectionCfg.get[Double]("classify.eye.scale-factor"),
+      detectionCfg.get[Int]("classify.eye.min-neighbors")
+    )
   faceClassifierOpt match {
     case None =>
       logger.warn("face cascade classifier not loaded, annotations suggestions will not be available")
@@ -293,7 +290,7 @@ class DetectionService @Inject()(
     (0L until rects.size).map(rects.get)
   }
 
-  def detect(path: String): Option[Annotations] = {
+  def classify(path: String): Option[Annotations] = {
     for {
       faceClassifier: OpenCvClassifier <- faceClassifierOpt
       mat: Mat = imread(new File(jpegCacheDir, s"${path}.jpg").getCanonicalPath, IMREAD_GRAYSCALE)
