@@ -55,15 +55,19 @@ div.content-placeholder {
   top: 0;
   left: 0;
   bottom: 0;
-  width: 2.2em;
+  width: 4.2em;
   overflow: scroll;
+}
+#toolbar * {
+  width: 100%;
+  margin: 2px 0;
 }
 #workspace {
   position: absolute;
   top: 0;
-  left: 2.5em;
+  left: 4.5em;
   bottom: 0;
-  right: 0;
+  right: 1em;
   overflow: scroll;
 }
 #annotation {

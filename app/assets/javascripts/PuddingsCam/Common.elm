@@ -6,8 +6,16 @@ import Navigation
 
 
 -- Constants
-scaledWidthPx : Int
-scaledWidthPx = 960
+targetScaledWidthPx : Int
+targetScaledWidthPx = 1024
+
+
+defaultScaleFactor : Float
+defaultScaleFactor = 0.16
+
+
+scaleFactors : List Float
+scaleFactors = defaultScaleFactor :: [0.25, 0.33, 0.5, 0.66, 1.0]
 
 
 -- Model
@@ -46,10 +54,13 @@ type alias MousePos = (Float, Float)
 type MouseDragState
   = Moving (Rectangle -> Shapes -> Shapes) Rectangle Point MousePos
   | Resizing (Rectangle -> Shapes -> Shapes) Rectangle Dimension Dimension MousePos
+type alias Image =
+  { originalSize : Dimension
+  , scaledSize : Dimension
+  , scaleFactor : Float
+  }
 type alias WorkingAnnotation =
-  { imageSize : Dimension
-  , scaleDown : Int -> Int
-  , scaleUp : Int -> Int
+  { image : Maybe Image
   , shapes : Maybe Shapes
   , unsaved : Bool
   , mouseDragState : Maybe MouseDragState
@@ -79,9 +90,11 @@ type Msg
   -- List images
   | NewFileItems (Result Http.Error FileItems)
   -- Edit annotation page load
+  | NewMetadata (Result Http.Error Metadata)
   | NewAnnotation (Result Http.Error Annotations)
   | NewAnnotationSuggestion (Result Http.Error Annotations)
-  | NewMetadata (Result Http.Error Metadata)
+  -- Change magnification
+  | ChangeScaleFactorTo Float
   -- Edit annotation mouse events
   | DragToCreateBoxStart Mouse.Event
   | DragToResizeBoxStart ShapeId MousePos
@@ -92,9 +105,15 @@ type Msg
   -- Edit annotation save/cancel events
   | SubmitAnnotationRequest
   | SubmitAnnotationResponse (Result Http.Error Annotations)
+  -- Misc
+  | NoOp
 
 
 -- Common functions
 pathSpec : List String -> String
 pathSpec path =
   String.concat (List.map ((++) "/" << Http.encodeUri) path)
+
+
+scale : Float -> Int -> Int
+scale scaleFactor = toFloat >> (*) scaleFactor >> round

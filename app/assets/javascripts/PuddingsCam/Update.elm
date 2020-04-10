@@ -92,9 +92,7 @@ update msg model =
               | path = imagePath
               , workingAnnotation =
                 Just
-                { imageSize = Dimension 0 0
-                , scaleDown = always 0
-                , scaleUp = always 0
+                { image = Nothing
                 , shapes = Nothing
                 , unsaved = False
                 , mouseDragState = Nothing
@@ -125,6 +123,43 @@ update msg model =
       )
 
     NewFileItems (Err err) ->
+      ( { model | message = Just (Err (toString err)) }
+      , Cmd.none
+      )
+
+    NewMetadata (Ok {size}) ->
+      ( { model
+        | workingAnnotation =
+          Maybe.map
+          ( \annotation ->
+            { annotation
+            | image =
+              Just
+              ( let
+                  targetScaleFactor : Float
+                  targetScaleFactor = (toFloat targetScaledWidthPx) / (toFloat size.widthPixel)
+
+                  scaleFactor : Float
+                  scaleFactor =
+                    Maybe.withDefault defaultScaleFactor
+                    (List.maximum (List.filter ((>=) targetScaleFactor) scaleFactors))
+                in
+                  { originalSize = size
+                  , scaledSize =
+                    { widthPixel = scale scaleFactor size.widthPixel
+                    , heightPixel = scale scaleFactor size.heightPixel
+                    }
+                  , scaleFactor = scaleFactor
+                  }
+              )
+            }
+          )
+          model.workingAnnotation
+        }
+      , Cmd.none
+      )
+
+    NewMetadata (Err err) ->
       ( { model | message = Just (Err (toString err)) }
       , Cmd.none
       )
@@ -200,15 +235,24 @@ update msg model =
       , Cmd.none
       )
 
-    NewMetadata (Ok {size}) ->
+    ChangeScaleFactorTo scaleFactor ->
       ( { model
         | workingAnnotation =
           Maybe.map
           ( \annotation ->
             { annotation
-            | imageSize = size
-            , scaleDown  = toFloat >> (*) ( toFloat scaledWidthPx / toFloat size.widthPixel ) >> round
-            , scaleUp  = toFloat >> (*) ( toFloat size.widthPixel / toFloat scaledWidthPx ) >> round
+            | image =
+              Maybe.map
+              ( \image ->
+                { image
+                | scaledSize =
+                  { widthPixel = scale scaleFactor image.originalSize.widthPixel
+                  , heightPixel = scale scaleFactor image.originalSize.heightPixel
+                  }
+                , scaleFactor = scaleFactor
+                }
+              )
+              annotation.image
             }
           )
           model.workingAnnotation
@@ -216,19 +260,19 @@ update msg model =
       , Cmd.none
       )
 
-    NewMetadata (Err err) ->
-      ( { model | message = Just (Err (toString err)) }
-      , Cmd.none
-      )
-
     DragToCreateBoxStart {clientPos, offsetPos} ->
-      case Maybe.andThen .shapes model.workingAnnotation of
-        Just (FaceAndTwoEyes _ _ _) ->
+      case (Maybe.andThen .shapes model.workingAnnotation, Maybe.andThen .image model.workingAnnotation) of
+        (_, Nothing) ->
+          ( { model | message = Just (Err "IMPOSSIBLE STATE: DragToCreateBoxStart when metadata not loaded") }
+          , Cmd.none
+          )
+
+        (Just (FaceAndTwoEyes _ _ _), _) ->
           ( { model | message = Just (Err "IMPOSSIBLE STATE: DragToCreateBoxStart when all shapes present") }
           , Cmd.none
           )
 
-        curShapes ->
+        (curShapes, Just image) ->
           ( { model
             | workingAnnotation =
               Maybe.map
@@ -239,8 +283,8 @@ update msg model =
                   loc : Point
                   loc =
                     Point
-                    (annotation.scaleUp (round xPixel))
-                    (annotation.scaleUp (round yPixel))
+                    (scale (1 / image.scaleFactor) (round xPixel))
+                    (scale (1 / image.scaleFactor) (round yPixel))
 
                   rect : Rectangle
                   rect = Rectangle loc (Dimension 0 0)
@@ -248,7 +292,7 @@ update msg model =
                   (newShapes, shapeId, constrainTo) =
                     case curShapes of
                       Nothing ->
-                        (Just (FaceOnly rect), Face, annotation.imageSize)
+                        (Just (FaceOnly rect), Face, image.originalSize)
                       Just (FaceOnly faceRect) ->
                         (Just (FaceAndOneEye faceRect rect), Eye1, faceRect.size)
                       Just (FaceAndOneEye faceRect eye1Rect) ->
@@ -291,8 +335,8 @@ update msg model =
                     Maybe.map (\rect -> (shapes, rect)) (getShape shapeId shapes)
                   )
                   annotation.shapes
-              in case shapesAndShape of
-                Just (shapes, rect) ->
+              in case (shapesAndShape, annotation.image) of
+                (Just (shapes, rect), Just image) ->
                   let
                     minSize : Dimension
                     minSize =
@@ -321,7 +365,7 @@ update msg model =
                         (Eye1, FaceAndOneEye faceRect _) -> faceRect.size
                         (Eye1, FaceAndTwoEyes faceRect _ _) -> faceRect.size
                         (Eye2, FaceAndTwoEyes faceRect _ _) -> faceRect.size
-                        _ -> annotation.imageSize
+                        _ -> image.originalSize
 
                     maxLen : Int
                     maxLen =
@@ -334,7 +378,7 @@ update msg model =
                   in
                     Just (Resizing (updateShapeInShapes shapeId) rect minSize maxSize mousePos)
 
-                Nothing -> Nothing
+                _ -> Nothing
             }
           )
           model.workingAnnotation
@@ -347,17 +391,17 @@ update msg model =
         | workingAnnotation =
           Maybe.map
           ( \annotation ->
-            case (annotation.shapes, annotation.mouseDragState) of
-              (Just shapes, Just (Resizing updateShapes baseRect minSize maxSize (baseXPixel, baseYPixel))) ->
+            case (annotation.shapes, annotation.image, annotation.mouseDragState) of
+              (Just shapes, Just image, Just (Resizing updateShapes baseRect minSize maxSize (baseXPixel, baseYPixel))) ->
                 let
                   baseSize : Dimension
                   baseSize = baseRect.size
 
                   candidateWidthPixel : Int
-                  candidateWidthPixel = annotation.scaleUp (round (curXPixel - baseXPixel)) + baseSize.widthPixel
+                  candidateWidthPixel = scale (1 / image.scaleFactor) (round (curXPixel - baseXPixel)) + baseSize.widthPixel
 
                   candidateHeightPixel : Int
-                  candidateHeightPixel = annotation.scaleUp (round (curYPixel - baseYPixel)) + baseSize.heightPixel
+                  candidateHeightPixel = scale (1 / image.scaleFactor) (round (curYPixel - baseYPixel)) + baseSize.heightPixel
 
                   preConstrainedSizePx : Int
                   preConstrainedSizePx = max candidateWidthPixel candidateHeightPixel
@@ -398,7 +442,10 @@ update msg model =
                     Maybe.andThen
                     ( \rect ->
                       case shapeId of
-                        Face -> Just (rect, annotation.imageSize)
+                        Face ->
+                          Maybe.map
+                          (\image -> (rect, image.originalSize))
+                          annotation.image
                         _ ->
                           Maybe.map
                           (\faceRect -> (rect, faceRect.size))
@@ -429,17 +476,17 @@ update msg model =
         | workingAnnotation =
           Maybe.map
           ( \annotation ->
-            case (annotation.shapes, annotation.mouseDragState) of
-              (Just shapes, Just (Moving updateShapes baseRect bottomRightBound (baseXPixel, baseYPixel))) ->
+            case (annotation.shapes, annotation.image, annotation.mouseDragState) of
+              (Just shapes, Just image, Just (Moving updateShapes baseRect bottomRightBound (baseXPixel, baseYPixel))) ->
                 let
                   baseLocation : Point
                   baseLocation = baseRect.location
 
                   xPixelDelta : Int
-                  xPixelDelta = annotation.scaleUp (round (curXPixel - baseXPixel))
+                  xPixelDelta = scale (1 / image.scaleFactor) (round (curXPixel - baseXPixel))
 
                   yPixelDelta : Int
-                  yPixelDelta = annotation.scaleUp (round (curYPixel - baseYPixel))
+                  yPixelDelta = scale (1 / image.scaleFactor) (round (curYPixel - baseYPixel))
 
                   preConstrainedXPixel : Int
                   preConstrainedXPixel = baseLocation.xPixel + xPixelDelta
@@ -543,5 +590,10 @@ update msg model =
 
     SubmitAnnotationResponse (Err err) ->
       ( { model | message = Just (Err (toString err)) }
+      , Cmd.none
+      )
+
+    NoOp ->
+      ( { model | message = Just (Err "IMPOSSIBLE STATE: NoOp should never be used") }
       , Cmd.none
       )

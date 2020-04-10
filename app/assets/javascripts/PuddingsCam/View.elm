@@ -2,16 +2,16 @@ module PuddingsCam.View exposing (view)
 
 import PuddingsCam.Common exposing (..)
 import Html exposing (..)
-import Html.Attributes exposing (class, disabled, href, id, src, style, title, width)
-import Html.Events exposing (onClick)
+import Html.Attributes exposing (class, disabled, height, href, id, selected, src, style, title, value, width)
+import Html.Events exposing (onClick, onInput)
 import Mouse exposing (onDown, onMove, onUp)
 
 
-shapesView : (Int -> Int) -> Maybe MouseDragState -> Shapes -> Bool -> List (Html Msg)
-shapesView scaleDown mouseDragState shapes unsaved =
+shapesView : Float -> Maybe MouseDragState -> Shapes -> Bool -> List (Html Msg)
+shapesView scaleFactor mouseDragState shapes unsaved =
   let
     pixelSize : Int -> Int
-    pixelSize size = max 1 ((scaleDown size) - 4)
+    pixelSize size = max 1 ((scale scaleFactor size) - 4)
 
     faceRect : Rectangle
     faceRect =
@@ -27,19 +27,19 @@ shapesView scaleDown mouseDragState shapes unsaved =
         FaceAndOneEye _ eye1Rect -> [ (Eye1, eye1Rect) ]
         FaceAndTwoEyes _ eye1Rect eye2Rect -> [ (Eye1, eye1Rect), (Eye2, eye2Rect) ]
 
-    topLeft : Point
-    topLeft = faceRect.location
+    faceTopLeft : Point
+    faceTopLeft = faceRect.location
 
-    dimension : Dimension
-    dimension = faceRect.size
+    faceDimension : Dimension
+    faceDimension = faceRect.size
   in
     [ div
       ( [ class ("shape" ++ if unsaved then " unsaved" else "")
         , style
-          [ ( "left", toString (scaleDown topLeft.xPixel) ++ "px" )
-          , ( "top", toString (scaleDown topLeft.yPixel) ++ "px" )
-          , ( "width", toString (pixelSize dimension.widthPixel) ++ "px" )
-          , ( "height", toString (pixelSize dimension.heightPixel) ++ "px" )
+          [ ( "left", toString (scale scaleFactor faceTopLeft.xPixel) ++ "px" )
+          , ( "top", toString (scale scaleFactor faceTopLeft.yPixel) ++ "px" )
+          , ( "width", toString (pixelSize faceDimension.widthPixel) ++ "px" )
+          , ( "height", toString (pixelSize faceDimension.heightPixel) ++ "px" )
           , let
               cursor : String
               cursor =
@@ -88,19 +88,19 @@ shapesView scaleDown mouseDragState shapes unsaved =
       ++( List.map
           ( \(shapeId, eyeRect) ->
             let
-              topLeft : Point
-              topLeft = eyeRect.location
+              eyeTopLeft : Point
+              eyeTopLeft = eyeRect.location
 
-              dimension : Dimension
-              dimension = eyeRect.size
+              eyeDimension : Dimension
+              eyeDimension = eyeRect.size
             in
               div
               [ class ("shape" ++ if unsaved then " unsaved" else "")
               , style
-                [ ( "left", toString ((scaleDown topLeft.xPixel) - 2) ++ "px" )
-                , ( "top", toString ((scaleDown topLeft.yPixel) - 2) ++ "px" )
-                , ( "width", toString (pixelSize dimension.widthPixel) ++ "px" )
-                , ( "height", toString (pixelSize dimension.heightPixel) ++ "px" )
+                [ ( "left", toString ((scale scaleFactor eyeTopLeft.xPixel) - 2) ++ "px" )
+                , ( "top", toString ((scale scaleFactor eyeTopLeft.yPixel) - 2) ++ "px" )
+                , ( "width", toString (pixelSize eyeDimension.widthPixel) ++ "px" )
+                , ( "height", toString (pixelSize eyeDimension.heightPixel) ++ "px" )
                 , let
                     cursor : String
                     cursor =
@@ -185,44 +185,72 @@ view model =
   , div [ class "content-container" ]
     ( List.map (always (div [ class "content-placeholder" ] [])) model.path
     ++[ case model.workingAnnotation of
-        Just { imageSize, scaleDown, shapes, unsaved, mouseDragState } ->
+        Just { image, shapes, unsaved, mouseDragState } ->
           div [ class "content-scrollable" ]
           [ div [ id "toolbar" ]
-            [ button [ onClick SubmitAnnotationRequest, disabled (not unsaved) ] [ text "💾" ] ]
-          , div [ id "workspace" ]
-            [ div
-              ( [ id "annotation"
-                , style [ ( "position", "relative" ) ]
+            [ button [ onClick SubmitAnnotationRequest, disabled (not unsaved) ] [ text "💾" ]
+            , case image of
+              Just { scaleFactor } ->
+                select
+                [ onInput
+                  ( \scaleFactorStr ->
+                    case String.toFloat scaleFactorStr of
+                      Ok scaleFactor -> ChangeScaleFactorTo scaleFactor
+                      _ -> NoOp
+                  )
                 ]
-              ++case mouseDragState of
-                  Nothing ->
-                    case shapes of
-                      Nothing ->
-                        [ onDown DragToCreateBoxStart
-                        , style [ ( "cursor", "crosshair" ) ]
-                        ]
-                      _ ->
-                        [ onDown (always DragStop) ]
-                  Just (Resizing _ _ _ _ _) ->
-                    [ onMove ( .clientPos >> DragToResizeBoxMove )
-                    , onUp ( always DragStop )
-                    ]
-                  Just (Moving _ _ _ _) ->
-                    [ onMove ( .clientPos >> DragToMoveBoxMove )
-                    , onUp ( always DragStop )
-                    ]
-              )
-              ( img
-                [ src ( "/image" ++ pathSpec model.path ++ ".jpg" )
-                , title (((toString imageSize.widthPixel) ++ "x" ++ (toString imageSize.heightPixel)))
-                , width scaledWidthPx
-                ]
-                []
-              ::case shapes of
-                Just shapes -> shapesView scaleDown mouseDragState shapes unsaved
-                Nothing -> []
-              )
+                ( List.map
+                  ( \scaleFactorOpt ->
+                    option
+                    [ value (toString scaleFactorOpt), selected (scaleFactorOpt == scaleFactor) ]
+                    [ text (toString (scaleFactorOpt * 100) ++ "%") ]
+                  )
+                  scaleFactors
+                )
+              Nothing ->
+                select [ disabled True ] []
             ]
+          , div [ id "workspace" ]
+            ( case image of
+              Just { originalSize, scaledSize, scaleFactor } ->
+                [ div
+                  ( [ id "annotation"
+                    , style [ ( "position", "relative" ) ]
+                    ]
+                  ++case mouseDragState of
+                      Nothing ->
+                        case shapes of
+                          Nothing ->
+                            [ onDown DragToCreateBoxStart
+                            , style [ ( "cursor", "crosshair" ) ]
+                            ]
+                          _ ->
+                            [ onDown (always DragStop) ]
+                      Just (Resizing _ _ _ _ _) ->
+                        [ onMove ( .clientPos >> DragToResizeBoxMove )
+                        , onUp ( always DragStop )
+                        ]
+                      Just (Moving _ _ _ _) ->
+                        [ onMove ( .clientPos >> DragToMoveBoxMove )
+                        , onUp ( always DragStop )
+                        ]
+                  )
+                  ( img
+                    [ src ( "/image" ++ pathSpec model.path ++ ".jpg" )
+                    , title (((toString originalSize.widthPixel) ++ "x" ++ (toString originalSize.heightPixel)))
+                    , width scaledSize.widthPixel
+                    , height scaledSize.heightPixel
+                    ]
+                    []
+                  ::case shapes of
+                    Just shapes -> shapesView scaleFactor mouseDragState shapes unsaved
+                    Nothing -> []
+                  )
+                ]
+
+              Nothing ->
+                [ text "Loading..." ]
+            )
           ]
 
         Nothing ->
