@@ -50,6 +50,22 @@ div.content-placeholder {
 }
 
 /* Annotation */
+#toolbar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 2.2em;
+  overflow: scroll;
+}
+#workspace {
+  position: absolute;
+  top: 0;
+  left: 2.5em;
+  bottom: 0;
+  right: 0;
+  overflow: scroll;
+}
 #annotation {
 }
 .shape {
@@ -62,11 +78,12 @@ div.content-placeholder {
 .move {
   color: #008000;
   padding-left: 0.3em;
+  opacity: 0.3;
 }
 .resize {
   position: absolute;
-  right: -5px;
   bottom: -5px;
+  right: -5px;
   width: 10px;
   height: 10px;
   cursor: nwse-resize;

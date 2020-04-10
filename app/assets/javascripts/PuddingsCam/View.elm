@@ -187,42 +187,42 @@ view model =
     ++[ case model.workingAnnotation of
         Just { imageSize, scaleDown, shapes, unsaved, mouseDragState } ->
           div [ class "content-scrollable" ]
-          [ div
-            ( [ id "annotation"
-              , style [ ( "position", "relative" ) ]
-              ]
-            ++case mouseDragState of
-                Nothing ->
-                  case shapes of
-                    Nothing ->
-                      [ onDown DragToCreateBoxStart
-                      , style [ ( "cursor", "crosshair" ) ]
-                      ]
-                    _ ->
-                      [ onDown (always DragStop) ]
-                Just (Resizing _ _ _ _ _) ->
-                  [ onMove ( .clientPos >> DragToResizeBoxMove )
-                  , onUp ( always DragStop )
-                  ]
-                Just (Moving _ _ _ _) ->
-                  [ onMove ( .clientPos >> DragToMoveBoxMove )
-                  , onUp ( always DragStop )
-                  ]
-            )
-            ( img
-              [ src ( "/image" ++ pathSpec model.path ++ ".jpg" )
-              , width scaledWidthPx
-              ]
-              []
-            ::case shapes of
-              Just shapes -> shapesView scaleDown mouseDragState shapes unsaved
-              Nothing -> []
-            )
-          , div []
-            [ button [ onClick SubmitAnnotationRequest, disabled (not unsaved) ] [ text "Save" ]
+          [ div [ id "toolbar" ]
+            [ button [ onClick SubmitAnnotationRequest, disabled (not unsaved) ] [ text "💾" ] ]
+          , div [ id "workspace" ]
+            [ div
+              ( [ id "annotation"
+                , style [ ( "position", "relative" ) ]
+                ]
+              ++case mouseDragState of
+                  Nothing ->
+                    case shapes of
+                      Nothing ->
+                        [ onDown DragToCreateBoxStart
+                        , style [ ( "cursor", "crosshair" ) ]
+                        ]
+                      _ ->
+                        [ onDown (always DragStop) ]
+                  Just (Resizing _ _ _ _ _) ->
+                    [ onMove ( .clientPos >> DragToResizeBoxMove )
+                    , onUp ( always DragStop )
+                    ]
+                  Just (Moving _ _ _ _) ->
+                    [ onMove ( .clientPos >> DragToMoveBoxMove )
+                    , onUp ( always DragStop )
+                    ]
+              )
+              ( img
+                [ src ( "/image" ++ pathSpec model.path ++ ".jpg" )
+                , title (((toString imageSize.widthPixel) ++ "x" ++ (toString imageSize.heightPixel)))
+                , width scaledWidthPx
+                ]
+                []
+              ::case shapes of
+                Just shapes -> shapesView scaleDown mouseDragState shapes unsaved
+                Nothing -> []
+              )
             ]
-          , div []
-            [ text ("Image size: " ++ (toString imageSize.widthPixel) ++ "x" ++ (toString imageSize.heightPixel)) ]
           ]
 
         Nothing ->
