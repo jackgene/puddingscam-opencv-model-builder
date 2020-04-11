@@ -95,7 +95,7 @@ shapesView scaleFactor mouseDragState shapes unsaved =
               eyeDimension = eyeRect.size
             in
               div
-              [ class ("shape" ++ if unsaved then " unsaved" else "")
+              [ class ("shape cross" ++ if unsaved then " unsaved" else "")
               , style
                 [ ( "left", toString ((scale scaleFactor eyeTopLeft.xPixel) - 2) ++ "px" )
                 , ( "top", toString ((scale scaleFactor eyeTopLeft.yPixel) - 2) ++ "px" )
