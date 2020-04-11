@@ -271,25 +271,27 @@ view model =
               )
             , hr [] []
             , div []
-              ( List.map
-                (\file ->
-                  div [ class "thumbnail" ]
-                  ( a [ href ( "#annotate|" ++ pathSpec model.path ++ "/" ++ file.name ) ]
-                    [ img
-                      [ id file.name
-                      , src ( "/image" ++ pathSpec model.path ++ "/" ++ file.name ++ ".jpg" )
-                      , title file.name
-                      , width 325
+              ( ( List.map
+                  (\file ->
+                    div [ class "thumbnail" ]
+                    ( a [ href ( "#annotate|" ++ pathSpec model.path ++ "/" ++ file.name ) ]
+                      [ img
+                        [ id file.name
+                        , src ( "/image" ++ pathSpec model.path ++ "/" ++ file.name ++ ".jpg" )
+                        , title file.name
+                        , width 325
+                        ]
+                        []
                       ]
-                      []
-                    ]
-                  ::case file.numAnnotations of
-                    Just numAnnotations ->
-                      [ div [ class "label" ] [ text (toString numAnnotations) ] ]
-                    Nothing -> []
+                    ::case file.numAnnotations of
+                      Just numAnnotations ->
+                        [ div [ class "label" ] [ text (toString numAnnotations) ] ]
+                      Nothing -> []
+                    )
                   )
+                  files
                 )
-                files
+              ++[ div [ class "spacer" ] [] ]
               )
             ]
       ]

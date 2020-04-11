@@ -48,6 +48,10 @@ div.content-placeholder {
   font-weight: bold;
   text-align: center;
 }
+.spacer {
+  height: 1em;
+  clear: left;
+}
 
 /* Annotation */
 #toolbar {
