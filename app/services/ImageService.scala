@@ -7,10 +7,11 @@ import java.io.{BufferedWriter, File, FileInputStream, FileWriter}
 import javax.imageio.ImageIO
 import javax.imageio.spi.{IIORegistry, ImageReaderSpi}
 import javax.inject.{Inject, Singleton}
+import javaxt.io.Image
 import model.{Annotations, Metadata}
 import org.libraw.javax.imageio.spi.LibRawImageReaderSpi
-import play.api.{Configuration, Logging}
 import play.api.libs.json.Json
+import play.api.{Configuration, Logging}
 
 import scala.io.Source
 import scala.jdk.CollectionConverters._
@@ -43,15 +44,16 @@ class ImageService @Inject()(cfg: Configuration, workingDirs: WorkingDirectorySe
 
   private val basePhotosDir: File = new File(cfg.get[String]("puddings-cam.base-photo-dir.path"))
 
-  private def loadCachedImage(path: String): Unit = {
+  private def loadAndCachedImage(path: String): Unit = {
     val sourceImageFile = new File(basePhotosDir, path)
 
     if (sourceImageFile.exists) {
-      val image: BufferedImage = ImageIO.read(sourceImageFile)
+      val image: Image = new Image(sourceImageFile)
 
       val cacheImageFile = new File(jpegCacheDir, s"${path}.jpg")
       cacheImageFile.getParentFile.mkdirs()
-      ImageIO.write(image, "jpg", cacheImageFile)
+      image.rotate() // Rotate JPEG if necessary
+      image.saveAs(cacheImageFile)
 
       val cacheMetadataFile = new File(metadataCacheDir, s"${path}.json")
       cacheMetadataFile.getParentFile.mkdirs()
@@ -70,7 +72,7 @@ class ImageService @Inject()(cfg: Configuration, workingDirs: WorkingDirectorySe
     new File(basePhotosDir, path) match {
       case sourceImageFile: File if sourceImageFile.exists =>
         val cacheImageFile = new File(jpegCacheDir, s"${path}.jpg")
-        if (!cacheImageFile.exists) loadCachedImage(path)
+        if (!cacheImageFile.exists) loadAndCachedImage(path)
 
         Some(ImageIO.read(cacheImageFile))
 
@@ -84,7 +86,7 @@ class ImageService @Inject()(cfg: Configuration, workingDirs: WorkingDirectorySe
         import Metadata.metadataFormat
 
         val cacheMetadataFile = new File(metadataCacheDir, s"${path}.json")
-        if (!cacheMetadataFile.exists) loadCachedImage(path)
+        if (!cacheMetadataFile.exists) loadAndCachedImage(path)
 
         Some(Json.parse(new FileInputStream(cacheMetadataFile)).as[Metadata])
 

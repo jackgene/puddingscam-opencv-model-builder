@@ -8,16 +8,19 @@ lazy val root = (project in file(".")).enablePlugins(PlayScala)
 scalaVersion := "2.13.1"
 
 resolvers += Resolver.mavenLocal
+resolvers += ("javaxt.com" at "http://www.javaxt.com/maven").withAllowInsecureProtocol(true)
 
 dependencyOverrides += "com.google.guava" % "guava" % "28.1-jre"
 
 libraryDependencies += guice
+libraryDependencies += "javaxt" % "javaxt-core" % "1.10.0"
 libraryDependencies += "org.bytedeco" % "javacv-platform" % "1.4.3"
 libraryDependencies += "org.bytedeco.javacpp-presets" % "opencv-platform" % "3.4.3-1.4.3"
 libraryDependencies += "org.bytedeco.javacpp-presets" % "opencv" % "3.4.3-1.4.3" classifier "macosx-x86_64-gpu"
 libraryDependencies += "org.bytedeco.javacpp-presets" % "cuda" % "10.0-7.3-1.4.3" classifier "macosx-x86_64-redist"
 libraryDependencies += "org.libraw" % "jlibraw" % "0.1-SNAPSHOT"
 
+libraryDependencies += "com.twelvemonkeys.imageio" % "imageio-jpeg" % "3.5" % Runtime
 libraryDependencies += "com.sun.activation" % "javax.activation" % "1.2.0" % Runtime
 
 javaOptions in Universal ++= Seq(
