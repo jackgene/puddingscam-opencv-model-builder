@@ -44,7 +44,7 @@ class ImageService @Inject()(cfg: Configuration, workingDirs: WorkingDirectorySe
 
   private val basePhotosDir: File = new File(cfg.get[String]("puddings-cam.base-photo-dir.path"))
 
-  private def loadAndCachedImage(path: String): Unit = {
+  private def loadAndCacheImage(path: String): Unit = {
     val sourceImageFile = new File(basePhotosDir, path)
 
     if (sourceImageFile.exists) {
@@ -72,9 +72,9 @@ class ImageService @Inject()(cfg: Configuration, workingDirs: WorkingDirectorySe
     new File(basePhotosDir, path) match {
       case sourceImageFile: File if sourceImageFile.exists =>
         val cacheImageFile = new File(jpegCacheDir, s"${path}.jpg")
-        if (!cacheImageFile.exists) loadAndCachedImage(path)
+        if (!cacheImageFile.exists) loadAndCacheImage(path)
 
-        Some(ImageIO.read(cacheImageFile))
+        Option(ImageIO.read(cacheImageFile))
 
       case _ => None
     }
@@ -86,7 +86,7 @@ class ImageService @Inject()(cfg: Configuration, workingDirs: WorkingDirectorySe
         import Metadata.metadataFormat
 
         val cacheMetadataFile = new File(metadataCacheDir, s"${path}.json")
-        if (!cacheMetadataFile.exists) loadAndCachedImage(path)
+        if (!cacheMetadataFile.exists) loadAndCacheImage(path)
 
         Some(Json.parse(new FileInputStream(cacheMetadataFile)).as[Metadata])
 

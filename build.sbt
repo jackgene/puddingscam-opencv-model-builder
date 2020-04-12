@@ -16,12 +16,16 @@ libraryDependencies += guice
 libraryDependencies += "javaxt" % "javaxt-core" % "1.10.0"
 libraryDependencies += "org.bytedeco" % "javacv-platform" % "1.4.3"
 libraryDependencies += "org.bytedeco.javacpp-presets" % "opencv-platform" % "3.4.3-1.4.3"
-libraryDependencies += "org.bytedeco.javacpp-presets" % "opencv" % "3.4.3-1.4.3" classifier "macosx-x86_64-gpu"
-libraryDependencies += "org.bytedeco.javacpp-presets" % "cuda" % "10.0-7.3-1.4.3" classifier "macosx-x86_64-redist"
-libraryDependencies += "org.libraw" % "jlibraw" % "0.1-SNAPSHOT"
+libraryDependencies += "org.libraw" % "jlibraw" % "0.2-SNAPSHOT"
 
 libraryDependencies += "com.twelvemonkeys.imageio" % "imageio-jpeg" % "3.5" % Runtime
 libraryDependencies += "com.sun.activation" % "javax.activation" % "1.2.0" % Runtime
+libraryDependencies += "org.bytedeco.javacpp-presets" % "opencv" % "3.4.3-1.4.3" % Runtime classifier (
+  "macosx-x86_64-gpu"
+)
+libraryDependencies += "org.bytedeco.javacpp-presets" % "cuda" % "10.0-7.3-1.4.3" % Runtime classifier (
+  "macosx-x86_64-redist"
+)
 
 javaOptions in Universal ++= Seq(
   // -J params will be added as jvm parameters
