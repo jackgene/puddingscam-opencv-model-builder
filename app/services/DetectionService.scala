@@ -85,8 +85,10 @@ class DetectionService @Inject()(
     cfg.get[Configuration]("puddings-cam.detection")
   private val AnnotationsDirPathChars: Int =
     annotationsDir.getAbsolutePath.length
+  private val OpenCvBinDir: String =
+    detectionCfg.get[String]("train.opencv.bin-dir")
   private val OpenCvTrainCascadeOpts: String =
-    detectionCfg.get[String]("train.opencv-traincascade.options")
+    detectionCfg.get[String]("train.opencv.traincascade.options")
 
   private def getAllAnnotations(root: File): Seq[(String,Annotations)] = {
     root.listFiles match {
@@ -223,7 +225,7 @@ class DetectionService @Inject()(
     new File(modelDir, "data").mkdirs()
 
     val vecCmd =
-      "opencv_createsamples " +
+      s"${OpenCvBinDir}/opencv_createsamples " +
       s"-vec ${new File(modelDir, "positive.vec").getAbsolutePath} " +
       s"-info info.dat " +
       s"-w ${objectSizePx} -h ${objectSizePx}"
@@ -238,14 +240,14 @@ class DetectionService @Inject()(
       ((numPos / (1 + ((numStages - 1) * (1 - minHitRate)))).toInt to (numPos * 0.8).toInt by -1).iterator.
       map { numPosTrain: Int =>
         val trainCmd =
-          "opencv_traincascade " +
-            s"-data ${new File(modelName, "data").getPath} " +
-            s"-vec ${new File(modelName, "positive.vec").getPath} " +
-            "-bg bg.txt " +
-            s"-numPos ${numPosTrain} -numNeg ${numNeg} -numStages ${numStages} " +
-            s"-w ${objectSizePx} -h ${objectSizePx} -minHitRate ${minHitRate} " +
-            "-baseFormatSave " + // Save in old format as required by CUDA classifier
-            OpenCvTrainCascadeOpts
+          s"${OpenCvBinDir}/opencv_traincascade " +
+          s"-data ${new File(modelName, "data").getPath} " +
+          s"-vec ${new File(modelName, "positive.vec").getPath} " +
+          "-bg bg.txt " +
+          s"-numPos ${numPosTrain} -numNeg ${numNeg} -numStages ${numStages} " +
+          s"-w ${objectSizePx} -h ${objectSizePx} -minHitRate ${minHitRate} " +
+          "-baseFormatSave " + // Save in old format as required by CUDA classifier
+          OpenCvTrainCascadeOpts
         runWithLogging(trainCmd, labelTrainingDir, trainLogFile)
       }.
       takeWhile(_ != 0).
