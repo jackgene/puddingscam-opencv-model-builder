@@ -17,6 +17,7 @@ import org.bytedeco.javacpp.opencv_objdetect.CascadeClassifier
 import play.api.{Configuration, Logging}
 
 import scala.collection.immutable.ArraySeq
+import scala.collection.parallel.CollectionConverters._
 import scala.jdk.CollectionConverters._
 import scala.sys.process._
 
@@ -127,7 +128,7 @@ class DetectionService @Inject()(
     val fgDir = new File(labelTrainingDir, "fg")
     fgDir.mkdirs()
     for {
-      (path: String, annotations: Annotations) <- allAnnotations
+      (path: String, annotations: Annotations) <- allAnnotations.par
       openCvPath: String = path.replace(" ", "%20") // OpenCV CLI tools can't handle spaces
       (annotation: Annotation, idx: Int) <- annotations.annotations.filter(_.label == label).zipWithIndex
       outFile = new File(fgDir, s"${openCvPath}.${idx}.jpg")
@@ -166,7 +167,7 @@ class DetectionService @Inject()(
     val bgDir = new File(labelTrainingDir, "bg")
     bgDir.mkdirs()
     for {
-      (path: String, annotations: Annotations) <- allAnnotations
+      (path: String, annotations: Annotations) <- allAnnotations.par
       rects: Set[Rectangle] = annotations.annotations.filter(_.label == label).map(_.shape).toSet
       if rects.nonEmpty
       outDir = new File(bgDir, path.replace(" ", "%20")) // OpenCV CLI tools can't handle spaces

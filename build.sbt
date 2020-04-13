@@ -17,6 +17,7 @@ libraryDependencies += "javaxt" % "javaxt-core" % "1.10.0"
 libraryDependencies += "org.bytedeco" % "javacv-platform" % "1.4.3"
 libraryDependencies += "org.bytedeco.javacpp-presets" % "opencv-platform" % "3.4.3-1.4.3"
 libraryDependencies += "org.libraw" % "jlibraw" % "0.2-SNAPSHOT"
+libraryDependencies += "org.scala-lang.modules" %% "scala-parallel-collections" % "0.2.0"
 
 libraryDependencies += "com.twelvemonkeys.imageio" % "imageio-jpeg" % "3.5" % Runtime
 libraryDependencies += "com.sun.activation" % "javax.activation" % "1.2.0" % Runtime
