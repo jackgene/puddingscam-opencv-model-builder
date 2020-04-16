@@ -3,6 +3,7 @@ package services
 import java.awt.Dimension
 import java.awt.image.BufferedImage
 import java.io.{BufferedWriter, File, FileInputStream, FileWriter}
+import java.nio.file.{FileSystem, FileSystems, Files, Path, PathMatcher}
 
 import javax.imageio.ImageIO
 import javax.imageio.spi.{IIORegistry, ImageReaderSpi}
@@ -42,7 +43,10 @@ class ImageService @Inject()(cfg: Configuration, workingDirs: WorkingDirectorySe
     } logger.debug(spi.getClass.getCanonicalName)
   }
 
+  private val fs: FileSystem = FileSystems.getDefault
+  private val isJson: PathMatcher = fs.getPathMatcher("glob:**/*.json")
   private val basePhotosDir: File = new File(cfg.get[String]("puddings-cam.base-photo-dir.path"))
+  private val annotationsDirPath: Path = annotationsDir.toPath
 
   private def loadAndCacheImage(path: String): Unit = {
     val sourceImageFile = new File(basePhotosDir, path)
@@ -93,6 +97,15 @@ class ImageService @Inject()(cfg: Configuration, workingDirs: WorkingDirectorySe
       case _ => None
     }
   }
+
+  def getAllAnnotationsByPath: Iterator[(String,Annotations)] =
+    for {
+      path: Path <- Files.walk(annotationsDirPath).iterator.asScala
+      if isJson.matches(path)
+      annotationsPathSpec: String =
+        annotationsDirPath.relativize(path).toString.dropRight(5)
+      annotations: Annotations <- getAnnotations(annotationsPathSpec)
+    } yield (annotationsPathSpec, annotations)
 
   def getAnnotations(path: String): Option[Annotations] = {
     new File(annotationsDir, s"${path}.json") match {
