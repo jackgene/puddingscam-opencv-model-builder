@@ -16,7 +16,6 @@ import org.bytedeco.javacpp.opencv_imgcodecs.{IMREAD_GRAYSCALE, imread}
 import org.bytedeco.javacpp.opencv_objdetect.CascadeClassifier
 import play.api.{Configuration, Logging}
 
-import scala.collection.immutable.ArraySeq
 import scala.collection.parallel.CollectionConverters._
 import scala.jdk.CollectionConverters._
 import scala.sys.process._
@@ -84,30 +83,10 @@ class DetectionService @Inject()(
 
   private val detectionCfg: Configuration =
     cfg.get[Configuration]("puddings-cam.detection")
-  private val AnnotationsDirPathChars: Int =
-    annotationsDir.getAbsolutePath.length
-  private val OpenCvBinDir: String =
+  private val openCvBinDir: String =
     detectionCfg.get[String]("train.opencv.bin-dir")
-  private val OpenCvTrainCascadeOpts: String =
+  private val openCvTrainCascadeOpts: String =
     detectionCfg.get[String]("train.opencv.traincascade.options")
-
-  private def getAllAnnotations(root: File): Seq[(String,Annotations)] = {
-    root.listFiles match {
-      case Array() => Nil
-
-      case nonEmpty: Array[File] =>
-        for {
-          fileOrDir: File <- ArraySeq.unsafeWrapArray(nonEmpty)
-          annotations: (String,Annotations) <-
-            if (fileOrDir.isDirectory) getAllAnnotations(fileOrDir)
-            else {
-              val path: String = fileOrDir.getAbsolutePath.drop(AnnotationsDirPathChars + 1).dropRight(5)
-
-              imageService.getAnnotations(path).map { annotations: Annotations => (path, annotations) }
-            }
-        } yield annotations
-    }
-  }
 
   private def runWithLogging(cmd: String, workingDir: File, logFile: File): Int = {
     (s"echo Command: ${cmd}" #>> logFile).!
@@ -122,7 +101,7 @@ class DetectionService @Inject()(
   def trainModel(label: String, objectSizePx: Int): Unit = {
     val labelTrainingDir = new File(trainingDir, label)
     if (!labelTrainingDir.exists) labelTrainingDir.mkdirs()
-    val allAnnotations: Seq[(String, Annotations)] = getAllAnnotations(annotationsDir)
+    val allAnnotations: Seq[(String, Annotations)] = imageService.getAllAnnotationsByPath.toSeq
 
     // Prepare foreground images and metadata
     val fgDir = new File(labelTrainingDir, "fg")
@@ -226,7 +205,7 @@ class DetectionService @Inject()(
     new File(modelDir, "data").mkdirs()
 
     val vecCmd =
-      s"${OpenCvBinDir}/opencv_createsamples " +
+      s"${openCvBinDir}/opencv_createsamples " +
       s"-vec ${new File(modelDir, "positive.vec").getAbsolutePath} " +
       s"-info info.dat " +
       s"-w ${objectSizePx} -h ${objectSizePx}"
@@ -241,14 +220,14 @@ class DetectionService @Inject()(
       ((numPos / (1 + ((numStages - 1) * (1 - minHitRate)))).toInt to (numPos * 0.8).toInt by -1).iterator.
       map { numPosTrain: Int =>
         val trainCmd =
-          s"${OpenCvBinDir}/opencv_traincascade " +
+          s"${openCvBinDir}/opencv_traincascade " +
           s"-data ${new File(modelName, "data").getPath} " +
           s"-vec ${new File(modelName, "positive.vec").getPath} " +
           "-bg bg.txt " +
           s"-numPos ${numPosTrain} -numNeg ${numNeg} -numStages ${numStages} " +
           s"-w ${objectSizePx} -h ${objectSizePx} -minHitRate ${minHitRate} " +
           "-baseFormatSave " + // Save in old format as required by CUDA classifier
-          OpenCvTrainCascadeOpts
+          openCvTrainCascadeOpts
         runWithLogging(trainCmd, labelTrainingDir, trainLogFile)
       }.
       takeWhile(_ != 0).
@@ -258,13 +237,13 @@ class DetectionService @Inject()(
 
   private val faceClassifierOpt: Option[OpenCvClassifier] =
     OpenCvClassifier.create(
-      new File(s"${workingDir}/suggestion/cascade/face/cascade.xml"),
+      new File(workingDir, "suggestion/cascade/face/cascade.xml"),
       detectionCfg.get[Double]("classify.face.scale-factor"),
       detectionCfg.get[Int]("classify.face.min-neighbors")
     )
   private val eyeClassifierOpt: Option[OpenCvClassifier] =
     OpenCvClassifier.create(
-      new File(s"${workingDir}/suggestion/cascade/eye/cascade.xml"),
+      new File(workingDir, "suggestion/cascade/eye/cascade.xml"),
       detectionCfg.get[Double]("classify.eye.scale-factor"),
       detectionCfg.get[Int]("classify.eye.min-neighbors")
     )
@@ -283,7 +262,7 @@ class DetectionService @Inject()(
   }
 
   private implicit val RectOrdering: Ordering[Rect] =
-    Ordering.by{ rect: Rect => rect.width * rect.height }
+    Ordering.by { rect: Rect => rect.width * rect.height }
   private def openCvDetectMultiscale(
       classifier: OpenCvClassifier, mat: Mat, minSize: Int, maxSize: Int): Seq[Rect] = {
     val rects: RectVector = classifier.detect(
@@ -292,6 +271,16 @@ class DetectionService @Inject()(
 
     (0L until rects.size).map(rects.get)
   }
+
+  def classify(
+      classifier: OpenCvClassifier, path: String, minSize: Int, maxSize: Int):
+      Seq[Rectangle] =
+    openCvDetectMultiscale(
+      classifier,
+      imread(new File(jpegCacheDir, s"${path}.jpg").getCanonicalPath, IMREAD_GRAYSCALE),
+      minSize, maxSize
+    ).
+    map { r: Rect => new Rectangle(r.x, r.y, r.width, r.height) }
 
   def classify(path: String): Option[Annotations] = {
     for {
