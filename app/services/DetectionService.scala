@@ -216,8 +216,9 @@ class DetectionService @Inject()(
 
     val vecCmd =
       s"${openCvBinDir}/opencv_createsamples " +
-      s"-vec ${new File(modelDir, "positive.vec").getAbsolutePath} " +
       s"-info info.dat " +
+      s"-vec ${new File(modelDir, "positive.vec").getAbsolutePath} " +
+      s"-num ${numPos} " +
       s"-w ${objectSizePx} -h ${objectSizePx}"
     val vecLogFile = new File(modelDir, "opencv_createsamples.log")
     runWithLogging(vecCmd, labelTrainingDir, vecLogFile)
