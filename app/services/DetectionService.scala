@@ -19,6 +19,7 @@ import play.api.{Configuration, Logging}
 import scala.collection.parallel.CollectionConverters._
 import scala.jdk.CollectionConverters._
 import scala.sys.process._
+import scala.util.Try
 
 object DetectionService {
   object OpenCvClassifier {
@@ -33,38 +34,47 @@ object DetectionService {
       else None
   }
   trait OpenCvClassifier {
-    def detect(image: Mat, minSize: Size, maxSize: Size): RectVector
+    def detect(image: Mat, minSize: Size, maxSize: Size): Try[RectVector]
   }
+
   class CpuOpenCvCascadeClassifier(parameters: File, scaleFactor: Double, minNeighbors: Int)
     extends OpenCvClassifier with Logging {
     val classifier: CascadeClassifier = new CascadeClassifier(parameters.getCanonicalPath)
     logger.info(s"Loaded classifier from ${parameters}...")
 
-    override def detect(image: Mat, minSize: Size, maxSize: Size): RectVector = {
+    override def detect(image: Mat, minSize: Size, maxSize: Size): Try[RectVector] = Try {
       val objs = new RectVector
       classifier.detectMultiScale(image, objs, scaleFactor, minNeighbors, 0, minSize, maxSize)
 
       objs
     }
   }
+
+  object CudaOpenCvCascadeClassifier {
+    private val objsGpuMat: GpuMat = new GpuMat
+    private val imageGpuMat: GpuMat = new GpuMat
+  }
   class CudaOpenCvCascadeClassifier(parameters: File, scaleFactor: Double, minNeighbors: Int)
       extends OpenCvClassifier with Logging {
-    val classifier: CudaCascadeClassifier =
+    import CudaOpenCvCascadeClassifier._
+
+    val DefaultObjectSize = new Size(0, 0)
+    private val classifier: CudaCascadeClassifier =
       CudaCascadeClassifier.create(parameters.getCanonicalPath)
+    classifier.setMaxNumObjects(1000000)
     classifier.setScaleFactor(scaleFactor)
     classifier.setMinNeighbors(minNeighbors)
-    val DefaultObjectSize = new Size(0, 0)
     logger.info(s"Loaded classifier from ${parameters}...")
 
-    override def detect(image: Mat, minSize: Size, maxSize: Size): RectVector = {
-      val objsMat: GpuMat = new GpuMat
+    override def detect(image: Mat, minSize: Size, maxSize: Size): Try[RectVector] = Try {
       val objs = new RectVector
-      classifier.synchronized {
+      CudaOpenCvCascadeClassifier.synchronized {
         classifier.setMinObjectSize(minSize)
         classifier.setMaxObjectSize(maxSize)
 
-        classifier.detectMultiScale(new GpuMat(image), objsMat)
-        classifier.convert(objsMat, objs)
+        imageGpuMat.upload(image)
+        classifier.detectMultiScale(imageGpuMat, objsGpuMat)
+        classifier.convert(objsGpuMat, objs)
 
         classifier.setMinObjectSize(DefaultObjectSize)
         classifier.setMaxObjectSize(DefaultObjectSize)
@@ -264,50 +274,51 @@ class DetectionService @Inject()(
   private implicit val RectOrdering: Ordering[Rect] =
     Ordering.by { rect: Rect => rect.width * rect.height }
   private def openCvDetectMultiscale(
-      classifier: OpenCvClassifier, mat: Mat, minSize: Int, maxSize: Int): Seq[Rect] = {
-    val rects: RectVector = classifier.detect(
-      mat, new Size(minSize, minSize), new Size(maxSize, maxSize)
-    )
-
-    (0L until rects.size).map(rects.get)
-  }
+      classifier: OpenCvClassifier, mat: Mat, minSize: Int, maxSize: Int): Try[Seq[Rect]] =
+    classifier.
+      detect(
+        mat, new Size(minSize, minSize), new Size(maxSize, maxSize)
+      ).
+      map { rects: RectVector =>
+        (0L until rects.size).to(LazyList).map(rects.get)
+      }
 
   def classify(
       classifier: OpenCvClassifier, path: String, minSize: Int, maxSize: Int):
-      Seq[Rectangle] =
+      Try[Seq[Rectangle]] =
     openCvDetectMultiscale(
       classifier,
       imread(new File(jpegCacheDir, s"${path}.jpg").getCanonicalPath, IMREAD_GRAYSCALE),
       minSize, maxSize
     ).
-    map { r: Rect => new Rectangle(r.x, r.y, r.width, r.height) }
+    map { rects: Seq[Rect] =>
+      rects.map { r: Rect => new Rectangle(r.x, r.y, r.width, r.height) }
+    }
 
   def classify(path: String): Option[Annotations] = {
     for {
       faceClassifier: OpenCvClassifier <- faceClassifierOpt
       mat: Mat = imread(new File(jpegCacheDir, s"${path}.jpg").getCanonicalPath, IMREAD_GRAYSCALE)
       minSize: Int = math.min(mat.rows, mat.cols) / 20
-      faces: Seq[Rect] <-
-        openCvDetectMultiscale(faceClassifier, mat, minSize, mat.rows) match {
-          case empty: Seq[Rect] if empty.isEmpty => None
-          case nonEmpty: Seq[Rect] => Some(nonEmpty)
-        }
+      faceRects: Seq[Rect] <- openCvDetectMultiscale(faceClassifier, mat, minSize, mat.rows).toOption
+      if faceRects.nonEmpty
     } yield {
-      val face: Rect = faces.max
+      val faceRect: Rect = faceRects.max
       val eyes: List[Annotation] =
         for {
           eyeClassifier: OpenCvClassifier <- eyeClassifierOpt.toList
           eyeArea: Rect = new Rect(
-            face.x, face.y + (face.height / 4), face.width, face.height * 7 / 15
+            faceRect.x, faceRect.y + (faceRect.height / 4), faceRect.width, faceRect.height * 7 / 15
           )
           eyeAreaMat: Mat = mat(eyeArea)
-          rect: Rect <-
-            openCvDetectMultiscale(eyeClassifier, eyeAreaMat, face.height / 10, face.height / 4).
-            sorted.takeRight(2)
+          eyeRects: Seq[Rect] <-
+            openCvDetectMultiscale(eyeClassifier, eyeAreaMat, faceRect.height / 10, faceRect.height / 4).
+            toOption.toList
+          eyeRect: Rect <- eyeRects.sorted.takeRight(2)
         } yield Annotation(
           label = "eye",
           shape = new Rectangle(
-            eyeArea.x + rect.x, eyeArea.y + rect.y, rect.width, rect.height
+            eyeArea.x + eyeRect.x, eyeArea.y + eyeRect.y, eyeRect.width, eyeRect.height
           )
         )
 
@@ -316,7 +327,7 @@ class DetectionService @Inject()(
           Annotation(
             label = "face",
             shape = new Rectangle(
-              face.x, face.y, face.width, face.height
+              faceRect.x, faceRect.y, faceRect.width, faceRect.height
             )
           ) :: eyes
       )
