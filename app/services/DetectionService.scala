@@ -28,7 +28,7 @@ object DetectionService {
         try {
           Some(new CudaOpenCvCascadeClassifier(parameters, scaleFactor, minNeighbors))
         } catch {
-          case _: Error =>
+          case _: Error | _: RuntimeException =>
             Some(new CpuOpenCvCascadeClassifier(parameters, scaleFactor, minNeighbors))
         }
       else None
