@@ -24,18 +24,24 @@ class ImageService @Inject()(cfg: Configuration, workingDirs: WorkingDirectorySe
   {
     val iioReg: IIORegistry = IIORegistry.getDefaultInstance
 
-    for {
-      tiffReaderSpi: ImageReaderSpi <- Option(
-        iioReg.getServiceProviderByClass(
-          Class.
-            forName("com.sun.imageio.plugins.tiff.TIFFImageReaderSpi").
-            asSubclass(classOf[ImageReaderSpi])
+    try {
+      for {
+        tiffReaderSpi: ImageReaderSpi <- Option(
+          iioReg.getServiceProviderByClass(
+            Class.
+              forName("com.sun.imageio.plugins.tiff.TIFFImageReaderSpi").
+              asSubclass(classOf[ImageReaderSpi])
+          )
         )
-      )
-      libRawReaderSpi: ImageReaderSpi <- Option(
-        iioReg.getServiceProviderByClass(classOf[LibRawImageReaderSpi])
-      )
-    } iioReg.setOrdering(classOf[ImageReaderSpi], libRawReaderSpi, tiffReaderSpi)
+        libRawReaderSpi: ImageReaderSpi <- Option(
+          iioReg.getServiceProviderByClass(classOf[LibRawImageReaderSpi])
+        )
+      } iioReg.setOrdering(classOf[ImageReaderSpi], libRawReaderSpi, tiffReaderSpi)
+    } catch {
+      case _: ClassNotFoundException => // noop
+      case t: Throwable =>
+        logger.error("Unable to elevate LibRawImageReaderSpi in registry.", t)
+    }
     logger.debug("ImageReaderSpi by priority:")
     for {
       spi: ImageReaderSpi <- iioReg.
