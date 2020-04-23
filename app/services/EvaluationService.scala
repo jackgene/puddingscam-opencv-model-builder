@@ -89,7 +89,8 @@ class EvaluationService @Inject()(
               case (_, _, _, count: Int) => count
             }.
             sum
-          val intersectionsOverUnion: Seq[(String,Double)] =
+          logger.debug(s"Found ${detectedCount} total ${label}s")
+          val iousByPath: Seq[(String,Double)] =
             for {
               (path: String, annotateds: Seq[Rectangle], detecteds: Seq[Rectangle], _) <-
                 annotatedAndDetected
@@ -99,12 +100,20 @@ class EvaluationService @Inject()(
               }
             } yield path -> intersectionOverUnion(detected, annotateds)
 
+          def meanIou(iousByPath: Seq[(String,Double)]): Double =
+            iousByPath.map { case (_, iou: Double) => iou }.sum / iousByPath.size
           (
             minNeighbor,
-            intersectionsOverUnion.map(_._2).sum / intersectionsOverUnion.size,
+            meanIou(iousByPath),
             annotatedAndDetected.size,
             detectedCount,
-            intersectionsOverUnion
+            iousByPath.
+              groupBy {
+                case (path: String, _) => path
+              }.
+              view.
+              mapValues(meanIou).
+              toSeq
           )
         }.
         toList
