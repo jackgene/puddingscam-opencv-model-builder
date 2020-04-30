@@ -13,7 +13,7 @@ import play.api.Configuration
 import play.api.libs.json.{JsValue, Json}
 import play.api.mvc._
 import play.utils.UriEncoding
-import services.{DetectionService, ImageService}
+import services.{DetectionService, ImageService, SuggestionService}
 
 import scala.jdk.CollectionConverters._
 
@@ -24,7 +24,7 @@ import scala.jdk.CollectionConverters._
 @Singleton
 class Application @Inject()(
     cfg: Configuration, cc: ControllerComponents,
-    imageService: ImageService, detectionService: DetectionService)
+    imageService: ImageService, detectionService: DetectionService, suggestionService: SuggestionService)
     extends AbstractController(cc) {
   import Annotations.annotationsFormat
   import FileItems.filesWrites
@@ -106,7 +106,7 @@ class Application @Inject()(
 
   def showAnnotation(urlEncodedPath: String, suggested: Boolean): Action[AnyContent] = Action {
     val path: String = UriEncoding.decodePath(urlEncodedPath, StandardCharsets.UTF_8)
-    (if (suggested) detectionService.classify(path) else imageService.getAnnotations(path)) match {
+    (if (suggested) suggestionService.suggestAnnotations(path) else imageService.getAnnotations(path)) match {
       case Some(annotations: Annotations) =>
         Ok(Json.toJson(annotations))
 

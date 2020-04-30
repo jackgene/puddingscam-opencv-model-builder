@@ -22,7 +22,7 @@ import scala.sys.process._
 import scala.util.Try
 
 object DetectionService {
-  object OpenCvClassifier {
+  private object OpenCvClassifier {
     def create(parameters: File, scaleFactor: Double, minNeighbors: Int): Option[OpenCvClassifier] =
       if (parameters.exists && parameters.isFile)
         try {
@@ -37,7 +37,7 @@ object DetectionService {
     def detect(image: Mat, minSize: Size, maxSize: Size): Try[RectVector]
   }
 
-  class CpuOpenCvCascadeClassifier(parameters: File, scaleFactor: Double, minNeighbors: Int)
+  private class CpuOpenCvCascadeClassifier(parameters: File, scaleFactor: Double, minNeighbors: Int)
     extends OpenCvClassifier with Logging {
     val classifier: CascadeClassifier = new CascadeClassifier(parameters.getCanonicalPath)
     logger.info(s"Loaded classifier from ${parameters}...")
@@ -50,11 +50,11 @@ object DetectionService {
     }
   }
 
-  object CudaOpenCvCascadeClassifier {
+  private object CudaOpenCvCascadeClassifier {
     private val objsGpuMat: GpuMat = new GpuMat
     private val imageGpuMat: GpuMat = new GpuMat
   }
-  class CudaOpenCvCascadeClassifier(parameters: File, scaleFactor: Double, minNeighbors: Int)
+  private class CudaOpenCvCascadeClassifier(parameters: File, scaleFactor: Double, minNeighbors: Int)
       extends OpenCvClassifier with Logging {
     import CudaOpenCvCascadeClassifier._
 
@@ -246,92 +246,42 @@ class DetectionService @Inject()(
     (s"echo Training complete after ${attempts} failed attempts" #>> trainLogFile).!
   }
 
-  private val faceClassifierOpt: Option[OpenCvClassifier] =
-    OpenCvClassifier.create(
-      new File(workingDir, "suggestion/cascade/face/cascade.xml"),
-      detectionCfg.get[Double]("classify.face.scale-factor"),
-      detectionCfg.get[Int]("classify.face.min-neighbors")
-    )
-  private val eyeClassifierOpt: Option[OpenCvClassifier] =
-    OpenCvClassifier.create(
-      new File(workingDir, "suggestion/cascade/eye/cascade.xml"),
-      detectionCfg.get[Double]("classify.eye.scale-factor"),
-      detectionCfg.get[Int]("classify.eye.min-neighbors")
-    )
-  faceClassifierOpt match {
-    case None =>
-      logger.warn("face cascade classifier not loaded, annotations suggestions will not be available")
+  def loadClassifier(parameters: File, scaleFactor: Double, minNeighbors: Int):
+      Option[OpenCvClassifier] =
+    OpenCvClassifier.create(parameters, scaleFactor, minNeighbors)
 
-    case Some(_) =>
-      eyeClassifierOpt match {
-        case None =>
-          logger.warn("eye cascade classifier not loaded, annotations suggestions for faces only")
-
-        case Some(_) =>
-          logger.info("All cascade classifiers for suggestions loaded")
-      }
-  }
-
-  private implicit val RectOrdering: Ordering[Rect] =
-    Ordering.by { rect: Rect => rect.width * rect.height }
   private def openCvDetectMultiscale(
-      classifier: OpenCvClassifier, mat: Mat, minSize: Int, maxSize: Int): Try[Seq[Rect]] =
-    classifier.
-      detect(
-        mat, new Size(minSize, minSize), new Size(maxSize, maxSize)
-      ).
+      classifier: OpenCvClassifier, mat: Mat, minSize: Size, maxSize: Size):
+      Try[Seq[Rect]] =
+    classifier.detect(mat, minSize, maxSize).
       map { rects: RectVector =>
         (0L until rects.size).to(LazyList).map(rects.get)
       }
 
   def classify(
-      classifier: OpenCvClassifier, path: String, minSize: Int, maxSize: Int):
+      classifier: OpenCvClassifier, path: String, crop: Option[Rectangle],
+      minWidth: Option[Int] = None, maxWidth: Option[Int] = None):
       Try[Seq[Rectangle]] =
     openCvDetectMultiscale(
       classifier,
-      imread(new File(jpegCacheDir, s"${path}.jpg").getCanonicalPath, IMREAD_GRAYSCALE),
-      minSize, maxSize
+      {
+        val mat = imread(
+          new File(jpegCacheDir, s"${path}.jpg").getCanonicalPath,
+          IMREAD_GRAYSCALE
+        )
+
+        crop match {
+          case Some(rectangle: Rectangle) =>
+            mat(new Rect(rectangle.x, rectangle.y, rectangle.width, rectangle.height))
+
+          case None =>
+            mat
+        }
+      },
+      minWidth.map { width: Int => new Size(width, width) }.orNull,
+      maxWidth.map { width: Int => new Size(width, width) }.orNull
     ).
     map { rects: Seq[Rect] =>
       rects.map { r: Rect => new Rectangle(r.x, r.y, r.width, r.height) }
     }
-
-  def classify(path: String): Option[Annotations] = {
-    for {
-      faceClassifier: OpenCvClassifier <- faceClassifierOpt
-      mat: Mat = imread(new File(jpegCacheDir, s"${path}.jpg").getCanonicalPath, IMREAD_GRAYSCALE)
-      minSize: Int = math.min(mat.rows, mat.cols) / 20
-      faceRects: Seq[Rect] <- openCvDetectMultiscale(faceClassifier, mat, minSize, mat.rows).toOption
-      if faceRects.nonEmpty
-    } yield {
-      val faceRect: Rect = faceRects.max
-      val eyes: List[Annotation] =
-        for {
-          eyeClassifier: OpenCvClassifier <- eyeClassifierOpt.toList
-          eyeArea: Rect = new Rect(
-            faceRect.x, faceRect.y + (faceRect.height / 4), faceRect.width, faceRect.height * 7 / 15
-          )
-          eyeAreaMat: Mat = mat(eyeArea)
-          eyeRects: Seq[Rect] <-
-            openCvDetectMultiscale(eyeClassifier, eyeAreaMat, faceRect.height / 10, faceRect.height / 4).
-            toOption.toList
-          eyeRect: Rect <- eyeRects.sorted.takeRight(2)
-        } yield Annotation(
-          label = "eye",
-          shape = new Rectangle(
-            eyeArea.x + eyeRect.x, eyeArea.y + eyeRect.y, eyeRect.width, eyeRect.height
-          )
-        )
-
-      Annotations(
-        annotations =
-          Annotation(
-            label = "face",
-            shape = new Rectangle(
-              faceRect.x, faceRect.y, faceRect.width, faceRect.height
-            )
-          ) :: eyes
-      )
-    }
-  }
 }
