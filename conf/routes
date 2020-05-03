@@ -9,8 +9,8 @@ GET     /files/                     controllers.Application.listFiles(path = "."
 GET     /files/*path                controllers.Application.listFiles(path: String)
 GET     /image/*path                controllers.Application.showImage(path: String)
 GET     /metadata/*path             controllers.Application.showMetadata(path: String)
-GET     /annotation/*path           controllers.Application.showAnnotation(path: String, suggested: Boolean ?= false)
-POST    /annotation/*path           controllers.Application.newAnnotation(path: String)
+GET     /annotations/*path          controllers.Application.showAnnotations(path: String, suggested: Boolean ?= false)
+POST    /annotations/*path          controllers.Application.newAnnotations(path: String)
 GET     /train/:label               controllers.Application.trainModel(label: String, size: Int)
 
 # Map static resources from the /public folder to the /assets URL path

@@ -104,7 +104,7 @@ class Application @Inject()(
     }
   }
 
-  def showAnnotation(urlEncodedPath: String, suggested: Boolean): Action[AnyContent] = Action {
+  def showAnnotations(urlEncodedPath: String, suggested: Boolean): Action[AnyContent] = Action {
     val path: String = UriEncoding.decodePath(urlEncodedPath, StandardCharsets.UTF_8)
     (if (suggested) suggestionService.suggestAnnotations(path) else imageService.getAnnotations(path)) match {
       case Some(annotations: Annotations) =>
@@ -114,7 +114,7 @@ class Application @Inject()(
     }
   }
 
-  def newAnnotation(urlEncodedPath: String): Action[JsValue] = Action(parse.json) {
+  def newAnnotations(urlEncodedPath: String): Action[JsValue] = Action(parse.json) {
     implicit request: Request[JsValue] =>
 
     Ok(

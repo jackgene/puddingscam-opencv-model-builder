@@ -103,7 +103,7 @@ update msg model =
               [ Http.send NewMetadata
                 ( Http.get ( "/metadata" ++ pathSpec imagePath ) metadataDecoder )
               , Http.send NewAnnotation
-                ( Http.get ( "/annotation" ++ pathSpec imagePath ) annotationsDecoder )
+                ( Http.get ( "/annotations" ++ pathSpec imagePath ) annotationsDecoder )
               ]
             )
 
@@ -194,7 +194,7 @@ update msg model =
           if status.code == 404 then -- No annotation means the image hasn't been annotated, get suggestions
             ( { model | message = Just (Ok "Awaiting suggested annotations...") }
             , Http.send NewAnnotationSuggestion
-              ( Http.get ( "/annotation" ++ pathSpec model.path ++ "?suggested=true" ) annotationsDecoder )
+              ( Http.get ( "/annotations" ++ pathSpec model.path ++ "?suggested=true" ) annotationsDecoder )
             )
           else ( { model | message = Just (Err (toString err)) }, Cmd.none )
 
@@ -544,7 +544,7 @@ update msg model =
             in
               Http.send SubmitAnnotationResponse
               ( Http.post
-                ( "/annotation" ++ pathSpec model.path ++ "?"
+                ( "/annotations" ++ pathSpec model.path ++ "?"
                 ++model.csrfToken.tokenName ++ "=" ++ model.csrfToken.tokenValue
                 )
                 ( Http.jsonBody
