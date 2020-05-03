@@ -127,6 +127,13 @@ class Application @Inject()(
     )
   }
 
+  def deleteAnnotations(urlEncodedPath: String): Action[AnyContent] = Action {
+    if (imageService.deleteAnnotations(UriEncoding.decodePath(urlEncodedPath, StandardCharsets.UTF_8)))
+      NoContent
+    else
+      NotFound
+  }
+
   def trainModel(label: String, objectSizePx: Int): Action[AnyContent] = Action {
     detectionService.trainModel(label, objectSizePx)
     Ok(s"Trained model for ${label} with object size ${objectSizePx}")

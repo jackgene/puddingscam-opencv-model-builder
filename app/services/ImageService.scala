@@ -151,4 +151,7 @@ class ImageService @Inject()(cfg: Configuration, workingDirs: WorkingDirectorySe
       writer.close()
     }
   }
+
+  def deleteAnnotations(path: String): Boolean =
+    new File(annotationsDir, s"${path}.json").delete()
 }

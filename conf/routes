@@ -3,7 +3,6 @@
 # https://www.playframework.com/documentation/latest/ScalaRouting
 # ~~~~
 
-# An example controller showing a sample home page
 GET     /                           controllers.Application.index
 GET     /files/                     controllers.Application.listFiles(path = ".")
 GET     /files/*path                controllers.Application.listFiles(path: String)
@@ -11,6 +10,7 @@ GET     /image/*path                controllers.Application.showImage(path: Stri
 GET     /metadata/*path             controllers.Application.showMetadata(path: String)
 GET     /annotations/*path          controllers.Application.showAnnotations(path: String, suggested: Boolean ?= false)
 POST    /annotations/*path          controllers.Application.newAnnotations(path: String)
+DELETE  /annotations/*path          controllers.Application.deleteAnnotations(path: String)
 GET     /train/:label               controllers.Application.trainModel(label: String, size: Int)
 
 # Map static resources from the /public folder to the /assets URL path
