@@ -9834,9 +9834,9 @@ var _user$project$PuddingsCam_Common$Image = F3(
 	function (a, b, c) {
 		return {originalSize: a, scaledSize: b, scaleFactor: c};
 	});
-var _user$project$PuddingsCam_Common$WorkingAnnotation = F4(
-	function (a, b, c, d) {
-		return {image: a, shapes: b, unsaved: c, mouseDragState: d};
+var _user$project$PuddingsCam_Common$WorkingAnnotation = F5(
+	function (a, b, c, d, e) {
+		return {image: a, persistedShapes: b, workingShapes: c, unsaved: d, mouseDragState: e};
 	});
 var _user$project$PuddingsCam_Common$Model = F5(
 	function (a, b, c, d, e) {
@@ -9879,6 +9879,7 @@ var _user$project$PuddingsCam_Common$SubmitAnnotationResponse = function (a) {
 	return {ctor: 'SubmitAnnotationResponse', _0: a};
 };
 var _user$project$PuddingsCam_Common$SubmitAnnotationRequest = {ctor: 'SubmitAnnotationRequest'};
+var _user$project$PuddingsCam_Common$ClearAnnotations = {ctor: 'ClearAnnotations'};
 var _user$project$PuddingsCam_Common$DragStop = {ctor: 'DragStop'};
 var _user$project$PuddingsCam_Common$DragToMoveBoxMove = function (a) {
 	return {ctor: 'DragToMoveBoxMove', _0: a};
@@ -10130,7 +10131,7 @@ var _user$project$PuddingsCam_Update$update = F2(
 												{
 													path: imagePath,
 													workingAnnotation: _elm_lang$core$Maybe$Just(
-														{image: _elm_lang$core$Maybe$Nothing, shapes: _elm_lang$core$Maybe$Nothing, unsaved: false, mouseDragState: _elm_lang$core$Maybe$Nothing}),
+														{image: _elm_lang$core$Maybe$Nothing, persistedShapes: _elm_lang$core$Maybe$Nothing, workingShapes: _elm_lang$core$Maybe$Nothing, unsaved: false, mouseDragState: _elm_lang$core$Maybe$Nothing}),
 													message: _elm_lang$core$Maybe$Just(
 														_elm_lang$core$Result$Ok('Awaiting metadata and annotations...'))
 												}),
@@ -10156,7 +10157,7 @@ var _user$project$PuddingsCam_Update$update = F2(
 																_elm_lang$http$Http$get,
 																A2(
 																	_elm_lang$core$Basics_ops['++'],
-																	'/annotation',
+																	'/annotations',
 																	_user$project$PuddingsCam_Common$pathSpec(imagePath)),
 																_user$project$PuddingsCam_Json$annotationsDecoder)),
 														_1: {ctor: '[]'}
@@ -10279,76 +10280,75 @@ var _user$project$PuddingsCam_Update$update = F2(
 								workingAnnotation: A2(
 									_elm_lang$core$Maybe$map,
 									function (annotation) {
+										var shapes = function () {
+											var _p9 = {
+												ctor: '_Tuple2',
+												_0: A2(
+													_elm_lang$core$List$filter,
+													function (_p7) {
+														return A2(
+															F2(
+																function (x, y) {
+																	return _elm_lang$core$Native_Utils.eq(x, y);
+																}),
+															'face',
+															function (_) {
+																return _.label;
+															}(_p7));
+													},
+													_p12),
+												_1: A2(
+													_elm_lang$core$List$filter,
+													function (_p8) {
+														return A2(
+															F2(
+																function (x, y) {
+																	return _elm_lang$core$Native_Utils.eq(x, y);
+																}),
+															'eye',
+															function (_) {
+																return _.label;
+															}(_p8));
+													},
+													_p12)
+											};
+											_v4_3:
+											do {
+												if (((_p9.ctor === '_Tuple2') && (_p9._0.ctor === '::')) && (_p9._0._1.ctor === '[]')) {
+													if (_p9._1.ctor === '[]') {
+														return _elm_lang$core$Maybe$Just(
+															_user$project$PuddingsCam_Common$FaceOnly(_p9._0._0.shape));
+													} else {
+														if (_p9._1._1.ctor === '[]') {
+															var _p10 = _p9._0._0;
+															return _elm_lang$core$Maybe$Just(
+																A2(
+																	_user$project$PuddingsCam_Common$FaceAndOneEye,
+																	_p10.shape,
+																	A2(_user$project$PuddingsCam_Update$relativize, _p10.shape, _p9._1._0.shape)));
+														} else {
+															if (_p9._1._1._1.ctor === '[]') {
+																var _p11 = _p9._0._0;
+																return _elm_lang$core$Maybe$Just(
+																	A3(
+																		_user$project$PuddingsCam_Common$FaceAndTwoEyes,
+																		_p11.shape,
+																		A2(_user$project$PuddingsCam_Update$relativize, _p11.shape, _p9._1._0.shape),
+																		A2(_user$project$PuddingsCam_Update$relativize, _p11.shape, _p9._1._1._0.shape)));
+															} else {
+																break _v4_3;
+															}
+														}
+													}
+												} else {
+													break _v4_3;
+												}
+											} while(false);
+											return _elm_lang$core$Maybe$Nothing;
+										}();
 										return _elm_lang$core$Native_Utils.update(
 											annotation,
-											{
-												shapes: function () {
-													var _p9 = {
-														ctor: '_Tuple2',
-														_0: A2(
-															_elm_lang$core$List$filter,
-															function (_p7) {
-																return A2(
-																	F2(
-																		function (x, y) {
-																			return _elm_lang$core$Native_Utils.eq(x, y);
-																		}),
-																	'face',
-																	function (_) {
-																		return _.label;
-																	}(_p7));
-															},
-															_p12),
-														_1: A2(
-															_elm_lang$core$List$filter,
-															function (_p8) {
-																return A2(
-																	F2(
-																		function (x, y) {
-																			return _elm_lang$core$Native_Utils.eq(x, y);
-																		}),
-																	'eye',
-																	function (_) {
-																		return _.label;
-																	}(_p8));
-															},
-															_p12)
-													};
-													_v4_3:
-													do {
-														if (((_p9.ctor === '_Tuple2') && (_p9._0.ctor === '::')) && (_p9._0._1.ctor === '[]')) {
-															if (_p9._1.ctor === '[]') {
-																return _elm_lang$core$Maybe$Just(
-																	_user$project$PuddingsCam_Common$FaceOnly(_p9._0._0.shape));
-															} else {
-																if (_p9._1._1.ctor === '[]') {
-																	var _p10 = _p9._0._0;
-																	return _elm_lang$core$Maybe$Just(
-																		A2(
-																			_user$project$PuddingsCam_Common$FaceAndOneEye,
-																			_p10.shape,
-																			A2(_user$project$PuddingsCam_Update$relativize, _p10.shape, _p9._1._0.shape)));
-																} else {
-																	if (_p9._1._1._1.ctor === '[]') {
-																		var _p11 = _p9._0._0;
-																		return _elm_lang$core$Maybe$Just(
-																			A3(
-																				_user$project$PuddingsCam_Common$FaceAndTwoEyes,
-																				_p11.shape,
-																				A2(_user$project$PuddingsCam_Update$relativize, _p11.shape, _p9._1._0.shape),
-																				A2(_user$project$PuddingsCam_Update$relativize, _p11.shape, _p9._1._1._0.shape)));
-																	} else {
-																		break _v4_3;
-																	}
-																}
-															}
-														} else {
-															break _v4_3;
-														}
-													} while(false);
-													return _elm_lang$core$Maybe$Nothing;
-												}()
-											});
+											{persistedShapes: shapes, workingShapes: shapes});
 									},
 									model.workingAnnotation),
 								message: _elm_lang$core$Maybe$Nothing
@@ -10374,7 +10374,7 @@ var _user$project$PuddingsCam_Update$update = F2(
 									_elm_lang$http$Http$get,
 									A2(
 										_elm_lang$core$Basics_ops['++'],
-										'/annotation',
+										'/annotations',
 										A2(
 											_elm_lang$core$Basics_ops['++'],
 											_user$project$PuddingsCam_Common$pathSpec(model.path),
@@ -10419,7 +10419,7 @@ var _user$project$PuddingsCam_Update$update = F2(
 										return _elm_lang$core$Native_Utils.update(
 											annotation,
 											{
-												shapes: function () {
+												workingShapes: function () {
 													var _p17 = {
 														ctor: '_Tuple2',
 														_0: A2(
@@ -10561,7 +10561,7 @@ var _user$project$PuddingsCam_Update$update = F2(
 					_0: A2(
 						_elm_lang$core$Maybe$andThen,
 						function (_) {
-							return _.shapes;
+							return _.workingShapes;
 						},
 						model.workingAnnotation),
 					_1: A2(
@@ -10670,7 +10670,7 @@ var _user$project$PuddingsCam_Update$update = F2(
 											return _elm_lang$core$Native_Utils.update(
 												annotation,
 												{
-													shapes: newShapes,
+													workingShapes: newShapes,
 													mouseDragState: _elm_lang$core$Maybe$Just(
 														A5(
 															_user$project$PuddingsCam_Common$Resizing,
@@ -10711,7 +10711,7 @@ var _user$project$PuddingsCam_Update$update = F2(
 															},
 															A2(_user$project$PuddingsCam_Update$getShape, _p39, shapes));
 													},
-													annotation.shapes);
+													annotation.workingShapes);
 												var _p31 = {ctor: '_Tuple2', _0: shapesAndShape, _1: annotation.image};
 												if ((((_p31.ctor === '_Tuple2') && (_p31._0.ctor === 'Just')) && (_p31._0._0.ctor === '_Tuple2')) && (_p31._1.ctor === 'Just')) {
 													var _p38 = _p31._0._0._0;
@@ -10800,7 +10800,7 @@ var _user$project$PuddingsCam_Update$update = F2(
 							workingAnnotation: A2(
 								_elm_lang$core$Maybe$map,
 								function (annotation) {
-									var _p40 = {ctor: '_Tuple3', _0: annotation.shapes, _1: annotation.image, _2: annotation.mouseDragState};
+									var _p40 = {ctor: '_Tuple3', _0: annotation.workingShapes, _1: annotation.image, _2: annotation.mouseDragState};
 									if ((((((_p40.ctor === '_Tuple3') && (_p40._0.ctor === 'Just')) && (_p40._1.ctor === 'Just')) && (_p40._2.ctor === 'Just')) && (_p40._2._0.ctor === 'Resizing')) && (_p40._2._0._4.ctor === '_Tuple2')) {
 										var _p44 = _p40._2._0._2;
 										var _p43 = _p40._2._0._3;
@@ -10822,19 +10822,20 @@ var _user$project$PuddingsCam_Update$update = F2(
 											_elm_lang$core$Basics$max,
 											minSizePx,
 											A2(_elm_lang$core$Basics$min, maxSizePx, preConstrainedSizePx));
+										var updatedShapes = _elm_lang$core$Maybe$Just(
+											A2(
+												_p40._2._0._0,
+												_elm_lang$core$Native_Utils.update(
+													_p41,
+													{
+														size: A2(_user$project$PuddingsCam_Common$Dimension, sizePx, sizePx)
+													}),
+												_p40._0._0));
 										return _elm_lang$core$Native_Utils.update(
 											annotation,
 											{
-												shapes: _elm_lang$core$Maybe$Just(
-													A2(
-														_p40._2._0._0,
-														_elm_lang$core$Native_Utils.update(
-															_p41,
-															{
-																size: A2(_user$project$PuddingsCam_Common$Dimension, sizePx, sizePx)
-															}),
-														_p40._0._0)),
-												unsaved: true
+												workingShapes: updatedShapes,
+												unsaved: !_elm_lang$core$Native_Utils.eq(annotation.persistedShapes, updatedShapes)
 											});
 									} else {
 										return annotation;
@@ -10883,7 +10884,7 @@ var _user$project$PuddingsCam_Update$update = F2(
 															},
 															A2(_user$project$PuddingsCam_Update$getShape, _p49, shapes));
 													},
-													annotation.shapes);
+													annotation.workingShapes);
 												var _p46 = shapeAndBounds;
 												if (_p46.ctor === 'Just') {
 													var _p48 = _p46._0._0;
@@ -10915,7 +10916,7 @@ var _user$project$PuddingsCam_Update$update = F2(
 							workingAnnotation: A2(
 								_elm_lang$core$Maybe$map,
 								function (annotation) {
-									var _p50 = {ctor: '_Tuple3', _0: annotation.shapes, _1: annotation.image, _2: annotation.mouseDragState};
+									var _p50 = {ctor: '_Tuple3', _0: annotation.workingShapes, _1: annotation.image, _2: annotation.mouseDragState};
 									if ((((((_p50.ctor === '_Tuple3') && (_p50._0.ctor === 'Just')) && (_p50._1.ctor === 'Just')) && (_p50._2.ctor === 'Just')) && (_p50._2._0.ctor === 'Moving')) && (_p50._2._0._3.ctor === '_Tuple2')) {
 										var _p53 = _p50._1._0;
 										var _p52 = _p50._2._0._2;
@@ -10942,7 +10943,7 @@ var _user$project$PuddingsCam_Update$update = F2(
 										return _elm_lang$core$Native_Utils.update(
 											annotation,
 											{
-												shapes: _elm_lang$core$Maybe$Just(
+												workingShapes: _elm_lang$core$Maybe$Just(
 													A2(
 														_p50._2._0._0,
 														_elm_lang$core$Native_Utils.update(
@@ -10978,6 +10979,26 @@ var _user$project$PuddingsCam_Update$update = F2(
 						}),
 					_1: _elm_lang$core$Platform_Cmd$none
 				};
+			case 'ClearAnnotations':
+				return {
+					ctor: '_Tuple2',
+					_0: _elm_lang$core$Native_Utils.update(
+						model,
+						{
+							workingAnnotation: A2(
+								_elm_lang$core$Maybe$map,
+								function (annotation) {
+									return _elm_lang$core$Native_Utils.update(
+										annotation,
+										{
+											workingShapes: _elm_lang$core$Maybe$Nothing,
+											unsaved: !_elm_lang$core$Native_Utils.eq(annotation.persistedShapes, _elm_lang$core$Maybe$Nothing)
+										});
+								},
+								model.workingAnnotation)
+						}),
+					_1: _elm_lang$core$Platform_Cmd$none
+				};
 			case 'SubmitAnnotationRequest':
 				return {
 					ctor: '_Tuple2',
@@ -10988,7 +11009,7 @@ var _user$project$PuddingsCam_Update$update = F2(
 						var _p54 = A2(
 							_elm_lang$core$Maybe$andThen,
 							function (_) {
-								return _.shapes;
+								return _.workingShapes;
 							},
 							model.workingAnnotation);
 						if (_p54.ctor === 'Just') {
@@ -11048,7 +11069,7 @@ var _user$project$PuddingsCam_Update$update = F2(
 									_elm_lang$http$Http$post,
 									A2(
 										_elm_lang$core$Basics_ops['++'],
-										'/annotation',
+										'/annotations',
 										A2(
 											_elm_lang$core$Basics_ops['++'],
 											_user$project$PuddingsCam_Common$pathSpec(model.path),
@@ -11130,7 +11151,35 @@ var _user$project$PuddingsCam_Update$update = F2(
 											})),
 									_user$project$PuddingsCam_Json$annotationsDecoder));
 						} else {
-							return _elm_lang$core$Platform_Cmd$none;
+							return A2(
+								_elm_lang$http$Http$send,
+								_elm_lang$core$Basics$always(
+									_user$project$PuddingsCam_Common$SubmitAnnotationResponse(
+										_elm_lang$core$Result$Ok(
+											_user$project$PuddingsCam_Common$Annotations(
+												{ctor: '[]'})))),
+								_elm_lang$http$Http$request(
+									{
+										method: 'DELETE',
+										headers: {ctor: '[]'},
+										url: A2(
+											_elm_lang$core$Basics_ops['++'],
+											'/annotations',
+											A2(
+												_elm_lang$core$Basics_ops['++'],
+												_user$project$PuddingsCam_Common$pathSpec(model.path),
+												A2(
+													_elm_lang$core$Basics_ops['++'],
+													'?',
+													A2(
+														_elm_lang$core$Basics_ops['++'],
+														model.csrfToken.tokenName,
+														A2(_elm_lang$core$Basics_ops['++'], '=', model.csrfToken.tokenValue))))),
+										body: _elm_lang$http$Http$emptyBody,
+										expect: _elm_lang$http$Http$expectString,
+										timeout: _elm_lang$core$Maybe$Nothing,
+										withCredentials: false
+									}));
 						}
 					}()
 				};
@@ -11146,7 +11195,7 @@ var _user$project$PuddingsCam_Update$update = F2(
 									function (annotation) {
 										return _elm_lang$core$Native_Utils.update(
 											annotation,
-											{unsaved: false});
+											{persistedShapes: annotation.workingShapes, unsaved: false});
 									},
 									model.workingAnnotation),
 								message: _elm_lang$core$Maybe$Just(
@@ -11780,8 +11829,8 @@ var _user$project$PuddingsCam_View$view = function (model) {
 								_0: function () {
 									var _p19 = model.workingAnnotation;
 									if (_p19.ctor === 'Just') {
-										var _p33 = _p19._0.unsaved;
-										var _p32 = _p19._0.shapes;
+										var _p33 = _p19._0.workingShapes;
+										var _p32 = _p19._0.unsaved;
 										var _p31 = _p19._0.mouseDragState;
 										var _p30 = _p19._0.image;
 										return A2(
@@ -11809,7 +11858,7 @@ var _user$project$PuddingsCam_View$view = function (model) {
 																_0: _elm_lang$html$Html_Events$onClick(_user$project$PuddingsCam_Common$SubmitAnnotationRequest),
 																_1: {
 																	ctor: '::',
-																	_0: _elm_lang$html$Html_Attributes$disabled(!_p33),
+																	_0: _elm_lang$html$Html_Attributes$disabled(!_p32),
 																	_1: {ctor: '[]'}
 																}
 															},
@@ -11820,63 +11869,83 @@ var _user$project$PuddingsCam_View$view = function (model) {
 															}),
 														_1: {
 															ctor: '::',
-															_0: function () {
-																var _p20 = _p30;
-																if (_p20.ctor === 'Just') {
-																	return A2(
-																		_elm_lang$html$Html$select,
-																		{
-																			ctor: '::',
-																			_0: _elm_lang$html$Html_Events$onInput(
-																				function (scaleFactorStr) {
-																					var _p21 = _elm_lang$core$String$toFloat(scaleFactorStr);
-																					if (_p21.ctor === 'Ok') {
-																						return _user$project$PuddingsCam_Common$ChangeScaleFactorTo(_p21._0);
-																					} else {
-																						return _user$project$PuddingsCam_Common$NoOp;
-																					}
-																				}),
-																			_1: {ctor: '[]'}
-																		},
-																		A2(
-																			_elm_lang$core$List$map,
-																			function (scaleFactorOpt) {
-																				return A2(
-																					_elm_lang$html$Html$option,
-																					{
-																						ctor: '::',
-																						_0: _elm_lang$html$Html_Attributes$value(
-																							_elm_lang$core$Basics$toString(scaleFactorOpt)),
-																						_1: {
-																							ctor: '::',
-																							_0: _elm_lang$html$Html_Attributes$selected(
-																								_elm_lang$core$Native_Utils.eq(scaleFactorOpt, _p20._0.scaleFactor)),
-																							_1: {ctor: '[]'}
+															_0: A2(
+																_elm_lang$html$Html$button,
+																{
+																	ctor: '::',
+																	_0: _elm_lang$html$Html_Events$onClick(_user$project$PuddingsCam_Common$ClearAnnotations),
+																	_1: {
+																		ctor: '::',
+																		_0: _elm_lang$html$Html_Attributes$disabled(
+																			_elm_lang$core$Native_Utils.eq(_p33, _elm_lang$core$Maybe$Nothing)),
+																		_1: {ctor: '[]'}
+																	}
+																},
+																{
+																	ctor: '::',
+																	_0: _elm_lang$html$Html$text('🗑'),
+																	_1: {ctor: '[]'}
+																}),
+															_1: {
+																ctor: '::',
+																_0: function () {
+																	var _p20 = _p30;
+																	if (_p20.ctor === 'Just') {
+																		return A2(
+																			_elm_lang$html$Html$select,
+																			{
+																				ctor: '::',
+																				_0: _elm_lang$html$Html_Events$onInput(
+																					function (scaleFactorStr) {
+																						var _p21 = _elm_lang$core$String$toFloat(scaleFactorStr);
+																						if (_p21.ctor === 'Ok') {
+																							return _user$project$PuddingsCam_Common$ChangeScaleFactorTo(_p21._0);
+																						} else {
+																							return _user$project$PuddingsCam_Common$NoOp;
 																						}
-																					},
-																					{
-																						ctor: '::',
-																						_0: _elm_lang$html$Html$text(
-																							A2(
-																								_elm_lang$core$Basics_ops['++'],
-																								_elm_lang$core$Basics$toString(scaleFactorOpt * 100),
-																								'%')),
-																						_1: {ctor: '[]'}
-																					});
+																					}),
+																				_1: {ctor: '[]'}
 																			},
-																			_user$project$PuddingsCam_Common$scaleFactors));
-																} else {
-																	return A2(
-																		_elm_lang$html$Html$select,
-																		{
-																			ctor: '::',
-																			_0: _elm_lang$html$Html_Attributes$disabled(true),
-																			_1: {ctor: '[]'}
-																		},
-																		{ctor: '[]'});
-																}
-															}(),
-															_1: {ctor: '[]'}
+																			A2(
+																				_elm_lang$core$List$map,
+																				function (scaleFactorOpt) {
+																					return A2(
+																						_elm_lang$html$Html$option,
+																						{
+																							ctor: '::',
+																							_0: _elm_lang$html$Html_Attributes$value(
+																								_elm_lang$core$Basics$toString(scaleFactorOpt)),
+																							_1: {
+																								ctor: '::',
+																								_0: _elm_lang$html$Html_Attributes$selected(
+																									_elm_lang$core$Native_Utils.eq(scaleFactorOpt, _p20._0.scaleFactor)),
+																								_1: {ctor: '[]'}
+																							}
+																						},
+																						{
+																							ctor: '::',
+																							_0: _elm_lang$html$Html$text(
+																								A2(
+																									_elm_lang$core$Basics_ops['++'],
+																									_elm_lang$core$Basics$toString(scaleFactorOpt * 100),
+																									'%')),
+																							_1: {ctor: '[]'}
+																						});
+																				},
+																				_user$project$PuddingsCam_Common$scaleFactors));
+																	} else {
+																		return A2(
+																			_elm_lang$html$Html$select,
+																			{
+																				ctor: '::',
+																				_0: _elm_lang$html$Html_Attributes$disabled(true),
+																				_1: {ctor: '[]'}
+																			},
+																			{ctor: '[]'});
+																	}
+																}(),
+																_1: {ctor: '[]'}
+															}
 														}
 													}),
 												_1: {
@@ -11916,7 +11985,7 @@ var _user$project$PuddingsCam_View$view = function (model) {
 																			function () {
 																				var _p23 = _p31;
 																				if (_p23.ctor === 'Nothing') {
-																					var _p24 = _p32;
+																					var _p24 = _p33;
 																					if (_p24.ctor === 'Nothing') {
 																						return {
 																							ctor: '::',
@@ -12015,9 +12084,9 @@ var _user$project$PuddingsCam_View$view = function (model) {
 																				},
 																				{ctor: '[]'}),
 																			_1: function () {
-																				var _p27 = _p32;
+																				var _p27 = _p33;
 																				if (_p27.ctor === 'Just') {
-																					return A4(_user$project$PuddingsCam_View$shapesView, _p22._0.scaleFactor, _p31, _p27._0, _p33);
+																					return A4(_user$project$PuddingsCam_View$shapesView, _p22._0.scaleFactor, _p31, _p27._0, _p32);
 																				} else {
 																					return {ctor: '[]'};
 																				}

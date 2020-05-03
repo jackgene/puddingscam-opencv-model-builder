@@ -185,10 +185,11 @@ view model =
   , div [ class "content-container" ]
     ( List.map (always (div [ class "content-placeholder" ] [])) model.path
     ++[ case model.workingAnnotation of
-        Just { image, shapes, unsaved, mouseDragState } ->
+        Just { image, workingShapes, unsaved, mouseDragState } ->
           div [ class "content-scrollable" ]
           [ div [ id "toolbar" ]
             [ button [ onClick SubmitAnnotationRequest, disabled (not unsaved) ] [ text "💾" ]
+            , button [ onClick ClearAnnotations, disabled (workingShapes == Nothing) ] [ text "🗑" ]
             , case image of
               Just { scaleFactor } ->
                 select
@@ -219,7 +220,7 @@ view model =
                     ]
                   ++case mouseDragState of
                       Nothing ->
-                        case shapes of
+                        case workingShapes of
                           Nothing ->
                             [ onDown DragToCreateBoxStart
                             , style [ ( "cursor", "crosshair" ) ]
@@ -242,7 +243,7 @@ view model =
                     , height scaledSize.heightPixel
                     ]
                     []
-                  ::case shapes of
+                  ::case workingShapes of
                     Just shapes -> shapesView scaleFactor mouseDragState shapes unsaved
                     Nothing -> []
                   )

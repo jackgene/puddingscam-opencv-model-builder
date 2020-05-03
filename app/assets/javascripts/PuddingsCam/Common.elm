@@ -61,7 +61,8 @@ type alias Image =
   }
 type alias WorkingAnnotation =
   { image : Maybe Image
-  , shapes : Maybe Shapes
+  , persistedShapes : Maybe Shapes
+  , workingShapes : Maybe Shapes
   , unsaved : Bool
   , mouseDragState : Maybe MouseDragState
   }
@@ -102,6 +103,8 @@ type Msg
   | DragToMoveBoxStart ShapeId MousePos
   | DragToMoveBoxMove MousePos
   | DragStop
+  -- Clear annotation
+  | ClearAnnotations
   -- Edit annotation save/cancel events
   | SubmitAnnotationRequest
   | SubmitAnnotationResponse (Result Http.Error Annotations)

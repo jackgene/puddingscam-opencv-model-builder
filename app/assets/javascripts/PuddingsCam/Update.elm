@@ -93,7 +93,8 @@ update msg model =
               , workingAnnotation =
                 Just
                 { image = Nothing
-                , shapes = Nothing
+                , persistedShapes = Nothing
+                , workingShapes = Nothing
                 , unsaved = False
                 , mouseDragState = Nothing
                 }
@@ -169,18 +170,19 @@ update msg model =
         | workingAnnotation =
           Maybe.map
           ( \annotation ->
-            { annotation
-            | shapes =
-              case (List.filter ((==) "face" << .label) annotations, List.filter ((==) "eye" << .label) annotations) of
-                ([face], []) ->
-                  Just (FaceOnly face.shape)
-                ([face], [eye1]) ->
-                  Just (FaceAndOneEye face.shape (relativize face.shape eye1.shape))
-                ([face], [eye1, eye2]) ->
-                  Just (FaceAndTwoEyes face.shape (relativize face.shape eye1.shape) (relativize face.shape eye2.shape))
-                _ ->
-                  Nothing
-            }
+            let
+              shapes : Maybe Shapes
+              shapes =
+                case (List.filter ((==) "face" << .label) annotations, List.filter ((==) "eye" << .label) annotations) of
+                  ([face], []) ->
+                    Just (FaceOnly face.shape)
+                  ([face], [eye1]) ->
+                    Just (FaceAndOneEye face.shape (relativize face.shape eye1.shape))
+                  ([face], [eye1, eye2]) ->
+                    Just (FaceAndTwoEyes face.shape (relativize face.shape eye1.shape) (relativize face.shape eye2.shape))
+                  _ ->
+                    Nothing
+            in { annotation | persistedShapes = shapes, workingShapes = shapes }
           )
           model.workingAnnotation
         , message = Nothing
@@ -206,7 +208,7 @@ update msg model =
           Maybe.map
           ( \annotation ->
             { annotation
-            | shapes =
+            | workingShapes =
               case (List.filter ((==) "face" << .label) annotations, List.filter ((==) "eye" << .label) annotations) of
                 ([face], []) ->
                   Just (FaceOnly face.shape)
@@ -261,7 +263,7 @@ update msg model =
       )
 
     DragToCreateBoxStart {clientPos, offsetPos} ->
-      case (Maybe.andThen .shapes model.workingAnnotation, Maybe.andThen .image model.workingAnnotation) of
+      case (Maybe.andThen .workingShapes model.workingAnnotation, Maybe.andThen .image model.workingAnnotation) of
         (_, Nothing) ->
           ( { model | message = Just (Err "IMPOSSIBLE STATE: DragToCreateBoxStart when metadata not loaded") }
           , Cmd.none
@@ -311,7 +313,7 @@ update msg model =
                   maxSize = Dimension maxLen maxLen
                 in
                   { annotation
-                  | shapes = newShapes
+                  | workingShapes = newShapes
                   , mouseDragState = Just (Resizing (updateShapeInShapes shapeId) rect minSize maxSize clientPos)
                   }
               )
@@ -334,7 +336,7 @@ update msg model =
                   ( \shapes ->
                     Maybe.map (\rect -> (shapes, rect)) (getShape shapeId shapes)
                   )
-                  annotation.shapes
+                  annotation.workingShapes
               in case (shapesAndShape, annotation.image) of
                 (Just (shapes, rect), Just image) ->
                   let
@@ -391,7 +393,7 @@ update msg model =
         | workingAnnotation =
           Maybe.map
           ( \annotation ->
-            case (annotation.shapes, annotation.image, annotation.mouseDragState) of
+            case (annotation.workingShapes, annotation.image, annotation.mouseDragState) of
               (Just shapes, Just image, Just (Resizing updateShapes baseRect minSize maxSize (baseXPixel, baseYPixel))) ->
                 let
                   baseSize : Dimension
@@ -414,10 +416,13 @@ update msg model =
 
                   sizePx : Int
                   sizePx = max minSizePx (min maxSizePx preConstrainedSizePx)
+
+                  updatedShapes : Maybe Shapes
+                  updatedShapes = Just (updateShapes { baseRect | size = Dimension sizePx sizePx } shapes)
                 in
                   { annotation
-                  | shapes = Just (updateShapes { baseRect | size = Dimension sizePx sizePx } shapes)
-                  , unsaved = True
+                  | workingShapes = updatedShapes
+                  , unsaved = annotation.persistedShapes /= updatedShapes
                   }
 
               _ -> annotation
@@ -453,7 +458,7 @@ update msg model =
                     )
                     (getShape shapeId shapes)
                   )
-                  annotation.shapes
+                  annotation.workingShapes
               in case shapeAndBounds of
                 Just (rect, bounds) ->
                   let
@@ -476,7 +481,7 @@ update msg model =
         | workingAnnotation =
           Maybe.map
           ( \annotation ->
-            case (annotation.shapes, annotation.image, annotation.mouseDragState) of
+            case (annotation.workingShapes, annotation.image, annotation.mouseDragState) of
               (Just shapes, Just image, Just (Moving updateShapes baseRect bottomRightBound (baseXPixel, baseYPixel))) ->
                 let
                   baseLocation : Point
@@ -501,7 +506,7 @@ update msg model =
                   yPixel = max 0 (min bottomRightBound.yPixel preConstrainedYPixel)
                 in
                   { annotation
-                  | shapes =
+                  | workingShapes =
                     Just
                     ( updateShapes
                       { baseRect | location = Point xPixel yPixel }
@@ -527,9 +532,24 @@ update msg model =
       , Cmd.none
       )
 
+    ClearAnnotations ->
+      ( { model
+        | workingAnnotation =
+          Maybe.map
+          ( \annotation ->
+            { annotation
+            | workingShapes = Nothing
+            , unsaved = annotation.persistedShapes /= Nothing
+            }
+          )
+          model.workingAnnotation
+        }
+      , Cmd.none
+      )
+
     SubmitAnnotationRequest ->
       ( { model | message = Nothing }
-      , case Maybe.andThen .shapes model.workingAnnotation of
+      , case Maybe.andThen .workingShapes model.workingAnnotation of
           Just shapes ->
             let
               labeledShapes : List (String, Rectangle)
@@ -574,14 +594,33 @@ update msg model =
                 annotationsDecoder
               )
 
-          Nothing -> Cmd.none
+          Nothing ->
+            Http.send (always (SubmitAnnotationResponse (Ok (Annotations []))))
+            ( Http.request
+              { method = "DELETE"
+              , headers = []
+              , url =
+                ( "/annotations" ++ pathSpec model.path ++ "?"
+                ++model.csrfToken.tokenName ++ "=" ++ model.csrfToken.tokenValue
+                )
+              , body = Http.emptyBody
+              , expect = Http.expectString
+              , timeout = Nothing
+              , withCredentials = False
+              }
+            )
       )
 
     SubmitAnnotationResponse (Ok _) ->
       ( { model
         | workingAnnotation =
           Maybe.map
-          ( \annotation -> { annotation | unsaved = False } )
+          ( \annotation ->
+            { annotation
+            | persistedShapes = annotation.workingShapes
+            , unsaved = False
+            }
+          )
           model.workingAnnotation
         , message = Just ( Ok "Annotation saved" )
         }
