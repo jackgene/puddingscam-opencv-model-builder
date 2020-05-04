@@ -96,6 +96,7 @@ class DetectionService @Inject()(
     detectionCfg.get[String]("train.opencv.bin-dir")
   private val openCvTrainCascadeOpts: String =
     detectionCfg.get[String]("train.opencv.traincascade.options")
+  private val SizeFactors: Seq[Double] = (-1 to 5).map(math.pow(2, _))
 
   private def runWithLogging(cmd: String, workingDir: File, logFile: File): Int = {
     (s"echo Command: ${cmd}" #>> logFile).!
@@ -173,22 +174,27 @@ class DetectionService @Inject()(
               else Option(img.getRaster.getBounds)
           } yield {
             val outDir: File = new File(bgDir, path.replace(" ", "%20")) // OpenCV CLI tools can't handle spaces
-            val size: Int = rects.map(_.width).max
-            val step: Int = size / 2
-            val margin: Int = size * 3 / 4
-            val negs: Seq[(Int,Int,File)] =
+            val baseSize: Int = rects.map(_.width).max
+            val boundsShortSide: Int = math.min(bounds.width, bounds.height)
+            val negs: Seq[(Int,Int,Int,File)] =
               for {
+                size: Int <- SizeFactors.
+                  map { factor: Double => (factor * baseSize).toInt }.
+                  dropWhile(_ <= boundsShortSide / 10).
+                  takeWhile(_ <= boundsShortSide)
+                step: Int = size / 2
+                margin: Int = size * 3 / 4
                 relX: Int <- 0 to (bounds.width - size) by step
                 x = relX + bounds.x
                 relY: Int <- 0 to (bounds.height - size) by step
                 y = relY + bounds.y
-                if rects.forall { rect: Rectangle =>
+                if size != baseSize || rects.forall { rect: Rectangle =>
                   x < rect.x - margin || x >= rect.x + margin || y < rect.y - margin || y >= rect.y + margin
                 }
               } yield {
-                val imgOutFile: File = new File(outDir, f"y${y}%04d_x${x}%04d.jpg")
+                val imgOutFile: File = new File(outDir, f"sz${size}%04d_y${y}%04d_x${x}%04d.jpg")
                 bgFileWriter.println(imgOutFile.getAbsolutePath)
-                (x, y, imgOutFile)
+                (size, x, y, imgOutFile)
               }
 
             if (!outDir.exists || outDir.lastModified < annotations.lastSaved) {
@@ -198,7 +204,7 @@ class DetectionService @Inject()(
                   sorted(Comparator.reverseOrder()).
                   forEach(Files.delete _)
 
-              for ((x: Int, y: Int, imgOutFile: File) <- negs) {
+              for ((size: Int, x: Int, y: Int, imgOutFile: File) <- negs) {
                 ImageIO.write(img.getSubimage(x, y, size, size), "jpeg", imgOutFile)
               }
             }
