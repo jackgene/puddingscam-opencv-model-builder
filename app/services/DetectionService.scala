@@ -198,11 +198,11 @@ class DetectionService @Inject()(
               }
 
             if (!outDir.exists || outDir.lastModified < annotations.lastSaved) {
-              if (!outDir.exists) outDir.mkdirs()
-              else
-                Files.walk(outDir.toPath).
-                  sorted(Comparator.reverseOrder()).
-                  forEach(Files.delete _)
+              if (outDir.exists) Files.
+                walk(outDir.toPath).
+                sorted(Comparator.reverseOrder()).
+                forEach(Files.delete _)
+              outDir.mkdirs()
 
               for ((size: Int, x: Int, y: Int, imgOutFile: File) <- negs) {
                 ImageIO.write(img.getSubimage(x, y, size, size), "jpeg", imgOutFile)
